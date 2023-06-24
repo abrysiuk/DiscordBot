@@ -24,7 +24,7 @@ public class Program
                 }
             }
         }
-        await Log(new LogMessage(LogSeverity.Info, "Program", String.Format("Log level set to {0}", (LogSeverity)logLevel)));
+        await Log(new LogMessage(LogSeverity.Info, "Program", $"Log level set to {(LogSeverity)logLevel}"));
 
         _client = new DiscordSocketClient(new DiscordSocketConfig
         {
@@ -87,7 +87,7 @@ public class Program
         catch (HttpException exception)
         {
             var json = JsonConvert.SerializeObject(exception.Errors);
-            await Log(new LogMessage(LogSeverity.Error, "Command Builder", string.Format("Error occured while building commands: {0}", json)));
+            await Log(new LogMessage(LogSeverity.Error, "Command Builder", $"Error occured while building commands: {json}"));
         }
         return;
     }
@@ -104,16 +104,14 @@ public class Program
 
     private async Task ReceiveMessage(SocketMessage message)
     {
-
-        await Log(new LogMessage(LogSeverity.Debug, "Bot", String.Format("Message from {0} Handled", message.Author.Username)));
         string regexPattern = @"(^|[.?!;,:-])\s*i\s+mean\b";
         if (Regex.IsMatch(message.Content.ToString(), regexPattern, RegexOptions.Multiline | RegexOptions.IgnoreCase))
         {
-            //if (Emote.TryParse(@"<:ditto:1075842464415494214>",out var emote)
+            //<:ditto:1075842464415494214>"
             if (Emote.TryParse(@"<:belfaris:1122028010808287292>", out var emote))
             {
                 await message.AddReactionAsync(emote);
-                await Log(new LogMessage(LogSeverity.Verbose, "Bot", String.Format("Reacted to {0}:{1}", message.Author.Username, message.Content)));
+                await Log(new LogMessage(LogSeverity.Verbose, "Bot", $"Ditto'd {message.Author.Username}:{message.Content}"));
             }
 
         }
