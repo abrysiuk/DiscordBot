@@ -1,16 +1,14 @@
 ﻿using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Discord.Net;
 using Newtonsoft.Json;
-using System.ComponentModel.Design;
 
 public class Program
 {
     public IConfiguration configuration => new ConfigurationBuilder().AddUserSecrets<Program>().Build();
-    private DiscordSocketClient? _client;
+    private DiscordSocketClient _client;
     public static Task Main(string[] args) => new Program().MainAsync(args);
 
     public async Task MainAsync(string[] args)
@@ -60,10 +58,11 @@ public class Program
         }
     }
 
-    public async Task Ready()
+    public Task Ready()
     {
         _client.SlashCommandExecuted += SlashCommandHandler;
         _client.MessageReceived += ReceiveMessage;
+        return Task.CompletedTask;
     }
     private async Task BuildCommands()
     {
