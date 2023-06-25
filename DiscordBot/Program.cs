@@ -103,7 +103,14 @@ namespace DiscordBot
             switch (command.Data.Name)
             {
                 case "leaderboard":
-                    await command.RespondAsync("Uhh... Todo...", ephemeral: true);
+                    var embed = new EmbedBuilder();
+
+                    embed.WithTitle("Stat Leaderboard")
+                        .WithFooter(footer => footer.Text = command.Data.Options.First(x => x.Name == "stat").Value.ToString())
+                        .AddField("All-Time", "```" + "Username          Score           \r\n" + "Andrew            253             \r\n" +  "Ben               899             \r\n" +
+                        "```") 
+                        .WithColor(Color.DarkPurple);
+                    await command.RespondAsync(embed: embed.Build(), ephemeral: true);
                     break;
             }
         }
