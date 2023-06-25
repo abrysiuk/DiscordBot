@@ -4,145 +4,217 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Discord.Net;
 using Newtonsoft.Json;
+using Microsoft.EntityFrameworkCore;
 
-public class Program
+namespace DiscordBot
 {
-    public IConfiguration configuration => new ConfigurationBuilder().AddUserSecrets<Program>().Build();
-    private DiscordSocketClient _client;
-    public static Task Main(string[] args) => new Program().MainAsync(args);
-
-    public async Task MainAsync(string[] args)
+    public class Program
     {
-        var logLevel = 3;
-        foreach (var arg in args)
+        public static IConfiguration Configuration => new ConfigurationBuilder().AddUserSecrets<Program>().Build();
+        private DiscordSocketClient _client = default!;
+        private AppDBContext _db = default!;
+        public static Task Main(string[] args) => new Program().MainAsync(args);
+        private int logLevel;
+        public async Task MainAsync(string[] args)
         {
-            if (arg.Contains("loglevel"))
+            logLevel = 3;
+            foreach (var arg in args)
             {
-                if (int.TryParse(arg.Split("=")[1], out var logTry) && logTry < 6)
+                if (arg.Contains("loglevel"))
                 {
-                    logLevel = logTry;
+                    if (int.TryParse(arg.Split('=')[1], out var logTry) && logTry < 6)
+                    {
+                        logLevel = logTry;
+                    }
+                }
+            }
+            await Log(LogSeverity.Info, "Log", $"Log level set to {(LogSeverity)logLevel}");
+
+            _db = new AppDBContext();
+
+            _client = new DiscordSocketClient(new DiscordSocketConfig
+            {
+                LogLevel = (LogSeverity)logLevel,
+                MessageCacheSize = 1024,
+                DefaultRetryMode = RetryMode.RetryRatelimit,
+                GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.GuildMessageReactions | GatewayIntents.Guilds
+            });
+
+            string? apiKey = Configuration["Discord:APIKey"];
+            _client.Log += Log;
+            _client.Ready += Ready;
+            await _client.LoginAsync(TokenType.Bot, apiKey);
+            await _client.StartAsync();
+
+            while (true)
+            {
+                switch (Console.ReadLine())
+                {
+                    case "exit" or "quit":
+                        await _client.StopAsync();
+                        await _client.LogoutAsync();
+                        return;
+                    case "buildcommands":
+                        await BuildCommands();
+                        break;
+                    default:
+                        await Log(LogSeverity.Error, "User Input", "Command Unknown");
+                        break;
                 }
             }
         }
-        await Log(new LogMessage(LogSeverity.Info, "Program", $"Log level set to {(LogSeverity)logLevel}"));
 
-        _client = new DiscordSocketClient(new DiscordSocketConfig
+        public Task Ready()
         {
-            LogLevel = (LogSeverity)logLevel,
-            MessageCacheSize = 1024,
-            DefaultRetryMode = RetryMode.RetryRatelimit,
-            GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.GuildMessageReactions | GatewayIntents.Guilds
-        });
-
-        string? apiKey = configuration["Discord:APIKey"];
-        _client.Log += Log;
-        _client.Ready += Ready;
-        await _client.LoginAsync(TokenType.Bot, apiKey);
-        await _client.StartAsync();
-
-        while (true)
-        {
-            switch (Console.ReadLine())
+            if (_client == null)
             {
-                case "exit" or "quit":
-                    await _client.StopAsync();
-                    await _client.LogoutAsync();
-                    return;
-                case "buildcommands":
-                    await BuildCommands();
-                    break;
-                default:
-                    Console.WriteLine("Unknown command.");
+                return Task.CompletedTask;
+            }
+            _client.SlashCommandExecuted += SlashCommandHandler;
+            _client.MessageReceived += ReceiveMessage;
+            _client.MessageUpdated += UpdateMessage;
+            return Task.CompletedTask;
+        }
+        private async Task BuildCommands()
+        {
+            if (_client == null)
+            {
+                return;
+            }
+            var leaderboardCommand = new SlashCommandBuilder();
+            leaderboardCommand.WithName("leaderboard");
+            leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by Ditto.NET");
+
+            leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
+                .WithName("stat")
+                .WithDescription("What stat would you like to report on?")
+                .WithRequired(true)
+                .AddChoice("I mean", 1)
+                .AddChoice("Game Pass", 2)
+                .AddChoice("Regrets", 3)
+                .WithType(ApplicationCommandOptionType.Integer)
+                );
+
+            try
+            {
+                await _client.CreateGlobalApplicationCommandAsync(leaderboardCommand.Build());
+            }
+            catch (HttpException exception)
+            {
+                var json = JsonConvert.SerializeObject(exception.Errors);
+                await Log(LogSeverity.Error, "Command Builder", $"Error occured while building commands: {json}");
+            }
+            return;
+        }
+
+        private async Task SlashCommandHandler(SocketSlashCommand command)
+        {
+            switch (command.Data.Name)
+            {
+                case "leaderboard":
+                    await command.RespondAsync("Uhh... Todo...", ephemeral: true);
                     break;
             }
         }
-    }
 
-    public Task Ready()
-    {
-        _client.SlashCommandExecuted += SlashCommandHandler;
-        _client.MessageReceived += ReceiveMessage;
-        return Task.CompletedTask;
-    }
-    private async Task BuildCommands()
-    {
-        var leaderboardCommand = new SlashCommandBuilder();
-        leaderboardCommand.WithName("leaderboard");
-        leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by Ditto.NET");
-
-        leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
-            .WithName("stat")
-            .WithDescription("What stat would you like to report on?")
-            .WithRequired(true)
-            .AddChoice("I mean", 1)
-            .AddChoice("Xbox", 2)
-            .AddChoice("Regrets", 3)
-            .WithType(ApplicationCommandOptionType.Integer)
-            );
-
-        try
+        private async Task ReceiveMessage(SocketMessage message)
         {
-            await _client.CreateGlobalApplicationCommandAsync(leaderboardCommand.Build());
-        }
-        catch (HttpException exception)
-        {
-            var json = JsonConvert.SerializeObject(exception.Errors);
-            await Log(new LogMessage(LogSeverity.Error, "Command Builder", $"Error occured while building commands: {json}"));
-        }
-        return;
-    }
+            if (message is SocketUserMessage)
+            {
+                DiscordMessage msg = (SocketUserMessage)message;
+                msg.DiscordShames = new List<DiscordShame>();
 
-    private async Task SlashCommandHandler(SocketSlashCommand command)
-    {
-        switch (command.Data.Name)
-        {
-            case "leaderboard":
-                await command.RespondAsync("Uhh... Todo...", ephemeral: true);
-                break;
-        }
-    }
+                await Shame((SocketUserMessage)message, msg.DiscordShames);
 
-    private async Task ReceiveMessage(SocketMessage message)
-    {
-        string regexPattern = @"(^|[.?!;,:-])\s*i\s+mean\b";
-        if (Regex.IsMatch(message.Content.ToString(), regexPattern, RegexOptions.Multiline | RegexOptions.IgnoreCase))
+                _db.UserMessages.Add(msg);
+                _db.SaveChanges();
+            }
+        }
+
+        private async Task UpdateMessage(Cacheable<IMessage, ulong> oldMessage, SocketMessage newMessage, ISocketMessageChannel channel)
+        {
+            if (newMessage is SocketUserMessage suMessage && newMessage is not null)
+            {
+                DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordShames).FirstOrDefault(s => s.Id == newMessage.Id);
+                if (msg == null)
+                {
+                    msg = suMessage;
+                    msg.DiscordShames = new List<DiscordShame>();
+                    _db.UserMessages.Add(msg);
+                }
+                else
+                {
+                    _db.Entry(msg).CurrentValues.SetValues((DiscordMessage)suMessage);
+                }
+
+                await Shame(suMessage, msg.DiscordShames);
+
+                _db.SaveChanges();
+            }
+        }
+        private async Task Shame(SocketUserMessage msg, ICollection<DiscordShame> discordShames)
+        {
+            var Reactions = new List<ReactionDef>
         {
             //<:ditto:1075842464415494214>"
-            if (Emote.TryParse(@"<:belfaris:1122028010808287292>", out var emote))
+            new ReactionDef("I mean", @"(^|[.?!;,:-])\s*i\s+mean\b", @"<:belfaris:1122028010808287292>"),
+            new ReactionDef("Game Pass", @"free\b.*game\s*pass|game\s*pass\b.*free","\uD83D\uDCB0")
+        };
+
+            foreach (ReactionDef reaction in Reactions)
             {
-                await message.AddReactionAsync(emote);
-                await Log(new LogMessage(LogSeverity.Verbose, "Bot", $"Ditto'd {message.Author.Username}:{message.Content}"));
+                if (Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase))
+                {
+                    if (!discordShames.Where(x => x.Type == reaction.Name).Any())
+                    {
+                        discordShames.Add(new DiscordShame() { Type = reaction.Name });
+
+                        if (Emote.TryParse(reaction.Emote, out var emote))
+                        {
+                            await msg.AddReactionAsync(emote);
+                            await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
+                        }
+                        else if (Emoji.TryParse(reaction.Emote, out var emoji))
+                        {
+                            await msg.AddReactionAsync(emoji);
+                            await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
+                        }
+                    }
+                }
             }
-
         }
-
-    }
-    private Task Log(LogMessage msg)
-    {
-        switch (msg.Severity)
+        private Task Log(LogSeverity logSeverity, string source, string message)
         {
-            case LogSeverity.Critical:
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.BackgroundColor = ConsoleColor.Red;
-                break;
-            case LogSeverity.Error:
-                Console.ForegroundColor = ConsoleColor.Red;
-                break;
-            case LogSeverity.Warning:
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                break;
-            case LogSeverity.Info:
-                Console.ForegroundColor = ConsoleColor.White;
-                break;
-            case LogSeverity.Verbose:
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                break;
-            case LogSeverity.Debug:
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                break;
+            return Log(new LogMessage(logSeverity, source, message));
         }
-        Console.WriteLine(msg.ToString());
-        Console.ResetColor();
-        return Task.CompletedTask;
+        private Task Log(LogMessage msg)
+        {
+            if (logLevel < (int)msg.Severity) { return Task.CompletedTask; }
+            switch (msg.Severity)
+            {
+                case LogSeverity.Critical:
+                    Console.ForegroundColor = ConsoleColor.Black;
+                    Console.BackgroundColor = ConsoleColor.Red;
+                    break;
+                case LogSeverity.Error:
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case LogSeverity.Warning:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case LogSeverity.Info:
+                    Console.ForegroundColor = ConsoleColor.White;
+                    break;
+                case LogSeverity.Verbose:
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    break;
+                case LogSeverity.Debug:
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    break;
+            }
+            Console.WriteLine(msg.ToString());
+            Console.ResetColor();
+            return Task.CompletedTask;
+        }
     }
 }
