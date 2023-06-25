@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Discord.Net;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
-
 namespace DiscordBot
 {
     public class Program
@@ -29,9 +28,7 @@ namespace DiscordBot
                 }
             }
             await Log(LogSeverity.Info, "Log", $"Log level set to {(LogSeverity)logLevel}");
-
             _db = new AppDBContext();
-
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = (LogSeverity)logLevel,
@@ -39,13 +36,11 @@ namespace DiscordBot
                 DefaultRetryMode = RetryMode.RetryRatelimit,
                 GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.GuildMessageReactions | GatewayIntents.Guilds
             });
-
             string? apiKey = Configuration["Discord:APIKey"];
             _client.Log += Log;
             _client.Ready += Ready;
             await _client.LoginAsync(TokenType.Bot, apiKey);
             await _client.StartAsync();
-
             while (true)
             {
                 switch (Console.ReadLine())
@@ -63,7 +58,6 @@ namespace DiscordBot
                 }
             }
         }
-
         public Task Ready()
         {
             if (_client == null)
@@ -84,7 +78,6 @@ namespace DiscordBot
             var leaderboardCommand = new SlashCommandBuilder();
             leaderboardCommand.WithName("leaderboard");
             leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by Ditto.NET");
-
             leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
                 .WithName("stat")
                 .WithDescription("What stat would you like to report on?")
@@ -94,7 +87,6 @@ namespace DiscordBot
                 .AddChoice("Regrets", 3)
                 .WithType(ApplicationCommandOptionType.Integer)
                 );
-
             try
             {
                 await _client.CreateGlobalApplicationCommandAsync(leaderboardCommand.Build());
@@ -106,7 +98,6 @@ namespace DiscordBot
             }
             return;
         }
-
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
             switch (command.Data.Name)
@@ -116,21 +107,18 @@ namespace DiscordBot
                     break;
             }
         }
-
         private async Task ReceiveMessage(SocketMessage message)
         {
             if (message is SocketUserMessage)
             {
                 DiscordMessage msg = (SocketUserMessage)message;
+                msg.GuildId = ((SocketGuildChannel)((SocketUserMessage)message).Channel).Guild.Id;
                 msg.DiscordShames = new List<DiscordShame>();
-
                 await Shame((SocketUserMessage)message, msg.DiscordShames);
-
                 _db.UserMessages.Add(msg);
                 _db.SaveChanges();
             }
         }
-
         private async Task UpdateMessage(Cacheable<IMessage, ulong> oldMessage, SocketMessage newMessage, ISocketMessageChannel channel)
         {
             if (newMessage is SocketUserMessage suMessage && newMessage is not null)
@@ -139,6 +127,7 @@ namespace DiscordBot
                 if (msg == null)
                 {
                     msg = suMessage;
+                    msg.GuildId = ((SocketGuildChannel)suMessage.Channel).Guild.Id;
                     msg.DiscordShames = new List<DiscordShame>();
                     _db.UserMessages.Add(msg);
                 }
@@ -146,9 +135,7 @@ namespace DiscordBot
                 {
                     _db.Entry(msg).CurrentValues.SetValues((DiscordMessage)suMessage);
                 }
-
                 await Shame(suMessage, msg.DiscordShames);
-
                 _db.SaveChanges();
             }
         }
@@ -160,26 +147,20 @@ namespace DiscordBot
             new ReactionDef("I mean", @"(^|[.?!;,:-])\s*i\s+mean\b", @"<:belfaris:1122028010808287292>"),
             new ReactionDef("Game Pass", @"free\b.*game\s*pass|game\s*pass\b.*free","\uD83D\uDCB0")
         };
-
             foreach (ReactionDef reaction in Reactions)
             {
-                if (Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase))
+                if (!Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase)) { continue; }
+                if (discordShames.Where(x => x.Type == reaction.Name).Any()) { continue; }
+                discordShames.Add(new DiscordShame() { Type = reaction.Name });
+                if (Emote.TryParse(reaction.Emote, out var emote))
                 {
-                    if (!discordShames.Where(x => x.Type == reaction.Name).Any())
-                    {
-                        discordShames.Add(new DiscordShame() { Type = reaction.Name });
-
-                        if (Emote.TryParse(reaction.Emote, out var emote))
-                        {
-                            await msg.AddReactionAsync(emote);
-                            await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
-                        }
-                        else if (Emoji.TryParse(reaction.Emote, out var emoji))
-                        {
-                            await msg.AddReactionAsync(emoji);
-                            await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
-                        }
-                    }
+                    await msg.AddReactionAsync(emote);
+                    await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
+                }
+                else if (Emoji.TryParse(reaction.Emote, out var emoji))
+                {
+                    await msg.AddReactionAsync(emoji);
+                    await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
                 }
             }
         }
