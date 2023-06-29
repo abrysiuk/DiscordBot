@@ -28,7 +28,7 @@ namespace DiscordBot
 				DefaultRetryMode = RetryMode.RetryRatelimit,
 				GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.Guilds,
 				UseInteractionSnowflakeDate = false
-			});
+			}) ;
 			string? apiKey = Configuration["Discord:APIKey"];
 			_client.Log += Log;
 			_client.Ready += Ready;
@@ -81,7 +81,7 @@ namespace DiscordBot
 			}
 			var leaderboardCommand = new SlashCommandBuilder();
 			leaderboardCommand.WithName("leaderboard");
-			leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by Ditto.NET");
+			leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by ShameBot");
 			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
 				.WithName("stat")
 				.WithDescription("What stat would you like to report on?")
@@ -90,6 +90,13 @@ namespace DiscordBot
 				.AddChoice("Game Pass", 2)
 				.AddChoice("Regrets", 3)
 				.WithType(ApplicationCommandOptionType.Integer)
+				);
+			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
+				.WithName("days")
+				.WithDescription("How many days back would you like to go? (Optional, default all-time)")
+				.WithRequired(false)
+				.WithType(ApplicationCommandOptionType.Integer)
+				.WithMinValue(0)
 				);
 			try
 			{
@@ -107,23 +114,27 @@ namespace DiscordBot
 			switch (command.Data.Name)
 			{
 				case "leaderboard":
-					switch ((long)command.Data.Options.First().Value)
+					var stat = (long)command.Data.Options.First(x => x.Name == "stat").Value;
+					var days = (long?)command.Data.Options.FirstOrDefault(x => x.Name == "days")?.Value;
+
+					if (days == 0) { days = null; }
+					switch (stat)
 					{
 						case 1:
-							await command.RespondAsync(embed: LeaderboardGen("I mean", "It's mean, but I mean is a crutch", "Times a statement started with 'I mean'.", command), ephemeral: true);
+							await command.RespondAsync(embed: LeaderboardGen("I mean", "It's mean, but I mean is a crutch", "Times a statement started with 'I mean'.", command, days), ephemeral: true);
 							break;
 						case 2:
-							await command.RespondAsync(embed: LeaderboardGen("Game Pass", "Is alcohol free at an all-inclusive?", "Times a game was declared free on game pass.", command), ephemeral: true);
+							await command.RespondAsync(embed: LeaderboardGen("Game Pass", "Is alcohol free at an all-inclusive?", "Times a game was declared free on game pass.", command, days), ephemeral: true);
 							break;
 						case 3:
-							await command.RespondAsync(embed: LeaderboardGen("Edit", "Ninjas are slower than robots", "Times edited or deleted messages", command), ephemeral: true);
+							await command.RespondAsync(embed: LeaderboardGen("Edit", "Robots are faster than ninjas", "Times edited or deleted messages", command, days), ephemeral: true);
 							break;
 					}
 					break;
 			}
 			await Log(LogSeverity.Verbose, "Discord Command", $"{command.User.Username} issued {command.Data.Name}.");
 		}
-		private Embed LeaderboardGen(string type, string footerText, string description, ISlashCommandInteraction command)
+		private Embed LeaderboardGen(string type, string footerText, string description, ISlashCommandInteraction command, long? days)
 		{
 			if (command.GuildId is null)
 			{
@@ -135,7 +146,7 @@ namespace DiscordBot
 
 			var messages = _db.UserMessages
 				.Include(x => x.DiscordShames)
-				.Where(x => x.GuildId == command.GuildId && x.DiscordShames.Any(y => y.Type == type))
+				.Where(x => x.GuildId == command.GuildId && x.DiscordShames.Any(y => y.Type == type && (days == null || y.Date >= DateTimeOffset.Now.AddDays(-(double)days))))
 				.GroupBy(x => x.AuthorId)
 				.Select(x => new
 				{
@@ -153,7 +164,7 @@ namespace DiscordBot
 
 			strBuilder =
 				$"+{new String('-', len + 2)}+-------+\n" +
-				$"  {"User".PadRight(len)}   Count  \n" +
+				$"| {"User".PadRight(len)} | Count |\n" +
 				$"+{new String('-', len + 2)}+-------+\n";
 
 			foreach (var item in messages)
@@ -167,7 +178,7 @@ namespace DiscordBot
 			embed.WithTitle("Stat Leaderboard")
 				.WithDescription(description)
 				.WithFooter(footer => footer.Text = footerText)
-				.AddField("All-Time", "```" + strBuilder + "```")
+				.AddField(days is null ? "All-Time" : $"Last {days} Days", "```\n" + strBuilder + "```")
 				.WithColor(Color.DarkPurple);
 
 			return embed.Build();
@@ -201,6 +212,21 @@ namespace DiscordBot
 				_db.UserMessages.Add(msg);
 			}
 
+			if (ichannel is null && imsg is not null)
+			{
+				ichannel = (IGuildChannel)imsg.Channel;
+			}
+
+			ichannel ??= (IGuildChannel)_client.GetChannel(channel.Id);
+
+			var recentLogs = await ichannel.Guild.GetAuditLogsAsync(1);
+
+			if(recentLogs.Any(x => x.User.Id != msg?.AuthorId && x.Data is MessageDeleteAuditLogData data && data.ChannelId == channel.Id))
+			{
+				_db.SaveChanges();
+				return;
+			}
+
 			if (msg is not null)
 			{
 				if (!msg.DiscordShames.Any(x => x.MessageId == msg.Id && x.Type == "Edit"))
@@ -208,16 +234,6 @@ namespace DiscordBot
 					msg.DiscordShames.Add(new DiscordShame() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.Deleted ?? DateTimeOffset.Now });
 				}
 				_db.SaveChanges();
-			}
-
-			if (ichannel is null && imsg is not null)
-			{
-				ichannel = (IGuildChannel)imsg.Channel;
-			}
-
-			if (ichannel is null)
-			{
-				_client.GetChannel(channel.Id);
 			}
 
 			ITextChannel? shameChannel = null;
