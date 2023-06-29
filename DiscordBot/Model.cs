@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -29,6 +30,7 @@ namespace DiscordBot
         public string CleanContent { get; set; } = default!;
         public DateTimeOffset Timestamp { get; set; }
         public DateTimeOffset? EditedTimestamp { get; set; }
+        public DateTimeOffset? Deleted { get; set; }
         public ulong ChannelId { get; set; }
         public string ChannelMention { get; set; } = default!;
         public ulong GuildId { get; set; }
@@ -42,33 +44,42 @@ namespace DiscordBot
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public ulong Id { get; set; }
-        public static implicit operator DiscordMessage(SocketUserMessage message)
+        private static DiscordMessage FromIUM (IUserMessage message)
         {
-            return new DiscordMessage
-            {
-                Id = message.Id,
-                Type = message.Type,
-                Source = message.Source,
-                IsTTS = message.IsTTS,
-                IsPinned = message.IsPinned,
-                IsSuppressed = message.IsSuppressed,
-                MentionedEveryone = message.MentionedEveryone,
-                Content = message.Content,
-                CleanContent = message.CleanContent,
-                Timestamp = message.Timestamp,
-                EditedTimestamp = message.EditedTimestamp,
-                ThreadID = message.Thread?.Id,
-                ThreadMention = message.Thread?.Mention,
-                CreatedAt = message.CreatedAt,
-                //Author = message.Author,
-                AuthorId = message.Author.Id,
-                AuthorMention = message.Author.Mention,
-                ChannelId = message.Channel.Id,
-                ChannelMention = message.Channel.Name,
-                ReferenceId = message.Reference is null ? null : (ulong)message.Reference.MessageId
-            };
+			return new DiscordMessage
+			{
+				Id = message.Id,
+				Type = message.Type,
+				Source = message.Source,
+				IsTTS = message.IsTTS,
+				IsPinned = message.IsPinned,
+				IsSuppressed = message.IsSuppressed,
+				MentionedEveryone = message.MentionedEveryone,
+				Content = message.Content,
+				CleanContent = message.CleanContent,
+				Timestamp = message.Timestamp,
+				EditedTimestamp = message.EditedTimestamp,
+				ThreadID = message.Thread?.Id,
+				ThreadMention = message.Thread?.Mention,
+				CreatedAt = message.CreatedAt,
+				//Author = message.Author,
+				AuthorId = message.Author.Id,
+				AuthorMention = message.Author.Mention,
+				ChannelId = message.Channel.Id,
+				ChannelMention = message.Channel.Name,
+				ReferenceId = (ulong?)message.Reference?.MessageId
+			};
+		}
+
+		public static implicit operator DiscordMessage(SocketUserMessage message)
+        {
+            return FromIUM(message);
         }
-        public virtual ICollection<DiscordShame> DiscordShames { get; set; } = default!;
+		public static implicit operator DiscordMessage(RestUserMessage message)
+		{
+			return FromIUM(message);
+		}
+		public virtual ICollection<DiscordShame> DiscordShames { get; set; } = default!;
     }
     [PrimaryKey(nameof(Type), nameof(MessageId))]
     public class DiscordShame
@@ -76,6 +87,7 @@ namespace DiscordBot
         public string Type { get; set; } = default!;
         public virtual DiscordMessage Message { get; set; } = default!;
         public ulong MessageId { get; set; }
+        public DateTimeOffset? Date { get; set; }
     }
     public class DiscordAuthor
     {
