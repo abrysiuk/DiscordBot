@@ -7,17 +7,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 namespace DiscordBot
 {
-    public class SlashLog
-    {
-        public ulong Id { get; set; }
-        public string Command { get; set; } = default!;
-        //public discordAuthor Author { get; set; }
-        public ulong AuthorID { get; set; }
-        public string AuthorMention { get; set; } = default!;
-        public DiscordMessageChannel Channel { get; set; } = default!;
-        public ulong ThreadId { get; set; }
-        public DateTimeOffset Timestamp { get; set; }
-    }
     public class DiscordMessage
     {
         public MessageType Type { get; set; }
@@ -34,7 +23,6 @@ namespace DiscordBot
         public ulong ChannelId { get; set; }
         public string ChannelMention { get; set; } = default!;
         public ulong GuildId { get; set; }
-        //public discordAuthor Author { get; set; }
         public ulong AuthorId { get; set; }
         public string AuthorMention { get; set; } = default!;
         public ulong? ThreadID { get; set; }
@@ -88,60 +76,6 @@ namespace DiscordBot
         public virtual DiscordMessage Message { get; set; } = default!;
         public ulong MessageId { get; set; }
         public DateTimeOffset? Date { get; set; }
-    }
-    public class DiscordAuthor
-    {
-        public string AvatarId { get; set; } = default!;
-        public string Discriminator { get; set; } = default!;
-        public ushort DiscriminatorValue { get; set; }
-        public bool IsBot { get; set; }
-        public bool IsWebhook { get; set; }
-        public string Username { get; set; } = default!;
-        public UserProperties? PublicFlags { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
-        public ulong Id { get; set; }
-        public string Mention { get; set; } = default!;
-        public static implicit operator DiscordAuthor(SocketUser u)
-        {
-            return new DiscordAuthor()
-            {
-                AvatarId = u.AvatarId,
-                Discriminator = u.Discriminator,
-                CreatedAt = u.CreatedAt,
-                Id = u.Id,
-                Mention = u.Mention,
-                DiscriminatorValue = u.DiscriminatorValue,
-                IsBot = u.IsBot,
-                IsWebhook = u.IsWebhook,
-                Username = u.Username,
-                PublicFlags = u.PublicFlags
-            };
-        }
-    }
-    public class DiscordMessageChannel
-    {
-        public string Mention { get; set; } = default!;
-        public ulong? CategoryId { get; set; }
-        public int Position { get; set; }
-        public ChannelFlags Flags { get; set; }
-        public DiscordGuild Guild { get; set; } = default!;
-        public string Name { get; set; } = default!;
-        public DateTimeOffset CreatedAt { get; set; }
-        public ulong Id { get; set; }
-    }
-    public class DiscordGuild
-    {
-        public string Name { get; set; } = default!;
-        public string IconId { get; set; } = default!;
-        public string IconUrl { get; set; } = default!;
-        public ulong OwnerId { get; set; }
-        [NotMapped]
-        public IReadOnlyCollection<GuildEmote> Emotes { get; set; } = default!;
-        [NotMapped]
-        public IReadOnlyCollection<ICustomSticker> Stickers { get; set; } = default!;
-        public string Description { get; set; } = default!;
-        public DateTimeOffset CreatedAt { get; set; }
-        public ulong Id { get; set; }
     }
     public class ReactionDef
     {
