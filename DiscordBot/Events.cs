@@ -102,7 +102,7 @@ namespace DiscordBot
 						.WithFooter(footer => footer.Text = $"In #{newMessage.Channel.Name} by {((IGuildUser)newMessage.Author).Nickname ?? newMessage.Author.Username}")
 						.WithColor(Color.Orange);
 					if (newMessage.Author != null) embed.WithAuthor(newMessage.Author);
-					await shameChannel.SendMessageAsync(embed: embed.Build());
+					await shameChannel.SendMessageAsync(embed: embed.Build(), flags: MessageFlags.SuppressNotification);
 				}
 
 				_db.SaveChanges();
@@ -174,7 +174,7 @@ namespace DiscordBot
 					.WithColor(Color.Red)
 					.WithFooter(footer => footer.Text = $"In #{ichannel?.Name ?? "Unknown"} by {author?.Nickname ?? author?.Username ?? "Unknown"}");
 			}
-			await shameChannel.SendMessageAsync(embed: embed.Build());
+			await shameChannel.SendMessageAsync(embed: embed.Build(), flags: MessageFlags.SuppressNotification);
 		}
 		private async Task SlashCommandHandler(ISlashCommandInteraction command)
 		{
