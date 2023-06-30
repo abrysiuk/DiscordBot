@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 namespace DiscordBot
 {
@@ -94,6 +95,23 @@ namespace DiscordBot
             Regex = regex;
             Emote = emote;
             Name = name;
+        }
+    }
+	[PrimaryKey(nameof(UserId), nameof(GuildId))]
+	public class BirthdayDef
+    {
+        public string CreatedBy { get; set; }
+        public DateTime Date { get; set;}
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        public ulong UserId { get; set; }
+		[DatabaseGenerated(DatabaseGeneratedOption.None)]
+		public ulong GuildId { get; set; }
+        public BirthdayDef()
+        {
+            CreatedBy = string.Empty;
+            Date = DateTime.MinValue;
+            UserId = ulong.MinValue;
+            GuildId = ulong.MinValue;
         }
     }
 }
