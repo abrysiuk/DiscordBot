@@ -39,7 +39,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("UserId", "GuildId");
 
-                    b.ToTable("BirthdayDefs");
+                    b.ToTable("BirthdayDefs", (string)null);
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>
@@ -113,7 +113,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserMessages");
+                    b.ToTable("UserMessages", (string)null);
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordShame", b =>
@@ -131,7 +131,7 @@ namespace DiscordBot.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("DiscordShame");
+                    b.ToTable("DiscordShame", (string)null);
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordShame", b =>

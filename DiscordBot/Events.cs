@@ -263,18 +263,31 @@ namespace DiscordBot
 			string strBuilder;
 			EmbedBuilder embed = new();
 			var _db = new AppDBContext();
-			var messages = _db.UserMessages
-				.Include(x => x.DiscordShames)
-				.Where(x => x.GuildId == command.GuildId && x.DiscordShames.Any(y => y.Type == type && (days == null || y.Date >= DateTimeOffset.Now.AddDays(-(double)days))))
-				.GroupBy(x => x.AuthorId)
+			var messages = _db.DiscordShame
+				.Include(x => x.Message)
+				.Where(x=> x.Type == type && (days == null || x.Date >=DateTimeOffset.Now.AddDays(-(double)days)))
+				.Where(x => x.Message.GuildId == command.GuildId)
+				.GroupBy(x=>x.Message.AuthorId)
 				.ToList()
-				.Select(x =>
-				new
+				.Select(x=> new
 				{
 					name = guildusers.Find(y => y.Id == x.Key)?.Nickname ?? guildusers.Find(y => y.Id == x.Key)?.Username ?? $"Deleted #{x.Key}",
 					count = x.Count()
-				}).
-				OrderByDescending(x => x.count).ToList();
+				})
+				.OrderByDescending(x => x.count).ToList();
+
+			//var messages = _db.UserMessages
+			//	.Include(x => x.DiscordShames)
+			//	.Where(x => x.GuildId == command.GuildId && x.DiscordShames.Any(y => y.Type == type && (days == null || y.Date >= DateTimeOffset.Now.AddDays(-(double)days))))
+			//	.GroupBy(x => x.AuthorId)
+			//	.ToList()
+			//	.Select(x =>
+			//	new
+			//	{
+			//		name = guildusers.Find(y => y.Id == x.Key)?.Nickname ?? guildusers.Find(y => y.Id == x.Key)?.Username ?? $"Deleted #{x.Key}",
+			//		count = x.Count()
+			//	}).
+			//	OrderByDescending(x => x.count).ToList();
 
 			if (!messages.Any())
 			{
