@@ -181,24 +181,15 @@ namespace DiscordBot
 			switch (command.Data.Name)
 			{
 				case "leaderboard":
-					var stat = (long)command.Data.Options.First(x => x.Name == "stat").Value;
-					var days = (long?)command.Data.Options.FirstOrDefault(x => x.Name == "days")?.Value;
-
-					if (days == 0) { days = null; }
-					switch (stat)
-					{
-						case 1:
-							await command.RespondAsync(embed: await LeaderboardGen("I mean", "It's mean, but I mean is a crutch", "Times a statement started with 'I mean'.", command, days), ephemeral: true);
-							break;
-						case 2:
-							await command.RespondAsync(embed: await LeaderboardGen("Game Pass", "Is alcohol free at an all-inclusive?", "Times a game was declared free on game pass.", command, days), ephemeral: true);
-							break;
-						case 3:
-							await command.RespondAsync(embed: await LeaderboardGen("Edit", "Robots are faster than ninjas", "Times edited or deleted messages", command, days), ephemeral: true);
-							break;
-					}
+					await LeaderboardCommand(command);
 					break;
+
 				case "birthday":
+					if (command.GuildId == null)
+					{
+						await command.RespondAsync("Please don't DM me. We're not friends.", ephemeral: true);
+						break;
+					}
 					var user = (IUser)command.Data.Options.First(x => x.Name == "user").Value;
 					if (user == null)
 					{
@@ -225,11 +216,6 @@ namespace DiscordBot
 						await command.RespondAsync($"You know there aren't {day} days in {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month)}.", ephemeral: true);
 						break;
 					}
-					if (command.GuildId == null)
-					{
-						await command.RespondAsync("Please don't DM me. We're not friends.", ephemeral: true);
-						break;
-					}
 
 					var date = new DateTime(DateTime.Now.Year, (int)month, (int)day);
 
@@ -247,74 +233,169 @@ namespace DiscordBot
 					await command.RespondAsync("Birthday List Updated!", ephemeral: true);
 					break;
 			}
-			await Log(LogSeverity.Verbose, "Discord Command", $"{command.User.Username} issued {command.Data.Name}.");
 		}
-		private async Task<Embed> LeaderboardGen(string type, string footerText, string description, ISlashCommandInteraction command, long? days)
+
+		private async Task LeaderboardCommand(ISlashCommandInteraction command)
 		{
+			var stat = (long)command.Data.Options.First(x => x.Name == "stat").Value;
+			var days = (long?)command.Data.Options.FirstOrDefault(x => x.Name == "days")?.Value;
+			if (days == 0) { days = null; }
+			var normalize = (bool?)command.Data.Options.FirstOrDefault(x => x.Name == "normalize")?.Value ?? false;
+
+			string type, footerText, description;
+			type = footerText = description = string.Empty;
+			Embed embedbuilt = new EmbedBuilder().Build();
+
 			if (command.GuildId == null)
 			{
-				return new EmbedBuilder().WithDescription("I can only tell you leaderboard stats within a server.").Build();
+				embedbuilt = new EmbedBuilder().WithDescription("I can only tell you leaderboard stats within a server.").Build();
+				return;
 			}
 
 			var guild = _client.GetGuild((ulong)command.GuildId);
-
-			var guildusers = await guild.GetUsersAsync().Flatten().ToListAsync();
-
-			string strBuilder;
+			var guildusersTask = guild.GetUsersAsync().Flatten().ToListAsync();
 			EmbedBuilder embed = new();
 			var _db = new AppDBContext();
-			var messages = _db.DiscordShame
-				.Include(x => x.Message)
-				.Where(x=> x.Type == type && (days == null || x.Date >=DateTimeOffset.Now.AddDays(-(double)days)))
-				.Where(x => x.Message.GuildId == command.GuildId)
-				.GroupBy(x=>x.Message.AuthorId)
-				.ToList()
-				.Select(x=> new
+
+			switch (stat)
+			{
+				case 1:
+					type = "I mean";
+					footerText = "It's mean, but I mean is a crutch";
+					description = "Times a statement started with 'I mean'.";
+					break;
+				case 2:
+					type = "Game Pass";
+					footerText = "Is alcohol free at an all-inclusive?";
+					description = "Times a game was declared free on game pass.";
+					break;
+				case 3:
+					type = "Edit";
+					footerText = "Robots are faster than ninjas";
+					description = "Times edited or deleted messages";
+					break;
+				case 4:
+					type = "Messages";
+					footerText = "How loud are you?";
+					description = "Total messages sent";
+					break;
+			}
+			
+
+			switch (stat)
+			{
+				case 1 or 2 or 3:
 				{
-					name = guildusers.Find(y => y.Id == x.Key)?.Nickname ?? guildusers.Find(y => y.Id == x.Key)?.Username ?? $"Deleted #{x.Key}",
-					count = x.Count()
-				})
-				.OrderByDescending(x => x.count).ToList();
+					var shameMessages = _db.DiscordShame
+						.Include(x => x.Message)
+						.Where(x => x.Type == type && (days == null || x.Date >= DateTimeOffset.Now.AddDays(-(double)days)))
+						.Where(x => x.Message.GuildId == command.GuildId)
+						.GroupBy(x => x.Message.AuthorId)
+						.Select(x => new { authorId = x.Key, shames = x.Count() });
 
-			//var messages = _db.UserMessages
-			//	.Include(x => x.DiscordShames)
-			//	.Where(x => x.GuildId == command.GuildId && x.DiscordShames.Any(y => y.Type == type && (days == null || y.Date >= DateTimeOffset.Now.AddDays(-(double)days))))
-			//	.GroupBy(x => x.AuthorId)
-			//	.ToList()
-			//	.Select(x =>
-			//	new
-			//	{
-			//		name = guildusers.Find(y => y.Id == x.Key)?.Nickname ?? guildusers.Find(y => y.Id == x.Key)?.Username ?? $"Deleted #{x.Key}",
-			//		count = x.Count()
-			//	}).
-			//	OrderByDescending(x => x.count).ToList();
+					var totalMessages = _db.UserMessages
+						.Where(x => x.GuildId == command.GuildId)
+						.GroupBy(x => x.AuthorId)
+						.Select(x => new { authorId = x.Key, total = x.Count() });
 
-			if (!messages.Any())
-			{
-				return new EmbedBuilder().WithDescription("That stat has no tracked instances").Build();
+					var guildusers = await guildusersTask;
+
+					var messages = shameMessages.Join(totalMessages, x => x.authorId, y => y.authorId, (x, y) => new { x.authorId, x.shames, y.total, per = x.shames * 1000.0 / y.total })
+						.ToList()
+						.Select(x => new
+						{
+							x.authorId,
+							name = guildusers.Find(y => y.Id == x.authorId)?.Nickname ?? guildusers.Find(y => y.Id == x.authorId)?.Username ?? $"Deleted #{x.authorId}",
+							x.shames,
+							x.total,
+							x.per
+						})
+						.OrderByDescending(x => normalize ? x.per : x.shames).ToList();
+
+					if (!messages.Any())
+					{
+						embedbuilt = new EmbedBuilder().WithDescription("That stat has no tracked instances").Build();
+					}
+
+					int len = messages.Aggregate(4, (x, y) => y.name.Length > x ? y.name.Length : x);
+
+					string strBuilder =
+						$"+{new String('-', len + 2)}+--------+\n" +
+						$"| {"User".PadRight(len)} | {(normalize ? "Per 1k" : "Count"),6} |\n" +
+						$"+{new String('-', len + 2)}+--------+\n";
+
+					foreach (var item in messages)
+					{
+						strBuilder += $"| {item.name.PadRight(len)} | {(normalize ? item.per.ToString("0.00") : item.shames.ToString()),6} |\n";
+					}
+
+					strBuilder += $"+{new String('-', len + 2)}+--------+";
+					embed.WithTitle("Stat Leaderboard")
+						.WithDescription(description)
+						.WithFooter(footer => footer.Text = footerText)
+						.AddField(days == null ? "All-Time" : $"Last {days} Days", "```\n" + strBuilder + "```")
+						.WithColor(Color.DarkPurple);
+
+					embedbuilt = embed.Build();
+
+					break;
+				}
+				case 4:
+				{
+					if (normalize)
+					{
+						embedbuilt = new EmbedBuilder().WithDescription("You want to know how many messages each user has sent... for every 1,000 messages they've sent? It's 1000. For everyone.").WithColor(Color.Blue).Build();
+					}
+
+					var totalMessages = _db.UserMessages
+						.Where(x => x.GuildId == command.GuildId)
+						.GroupBy(x => x.AuthorId)
+						.Select(x => new { authorId = x.Key, total = x.Count() })
+						.OrderByDescending(x=>x.total)
+						.Take(30)
+						.ToList();
+
+					var guildusers = await guildusersTask;
+
+					var messages = totalMessages.Select(x => new
+						 {
+							 x.authorId,
+							 name = guildusers.Find(y => y.Id == x.authorId)?.Nickname ?? guildusers.Find(y => y.Id == x.authorId)?.Username ?? $"Deleted #{x.authorId}",
+							 x.total
+						 })
+						.OrderByDescending(x => x.total).ToList();
+
+					if (!messages.Any())
+					{
+						embedbuilt = new EmbedBuilder().WithDescription("I don't have a single clue what has been said here.").Build();
+					}
+
+					int len = messages.Aggregate(4, (x, y) => y.name.Length > x ? y.name.Length : x);
+
+					string strBuilder =
+						$"+{new String('-', len + 2)}+--------+\n" +
+						$"| {"User".PadRight(len)} |  Count |\n" +
+						$"+{new String('-', len + 2)}+--------+\n";
+
+					foreach (var item in messages)
+					{
+						strBuilder += $"| {item.name.PadRight(len)} | {(item.total),6} |\n";
+					}
+
+					strBuilder += $"+{new String('-', len + 2)}+--------+";
+					embed.WithTitle("Stat Leaderboard")
+						.WithDescription(description)
+						.WithFooter(footer => footer.Text = footerText)
+						.AddField(days == null ? "All-Time" : $"Last {days} Days", "```\n" + strBuilder + "```")
+						.WithColor(Color.DarkPurple);
+
+					embedbuilt = embed.Build();
+					break;
+				}
 			}
-
-			int len = messages.Aggregate(4, (x, y) => y.name.Length > x ? y.name.Length : x);
-
-			strBuilder =
-				$"+{new String('-', len + 2)}+-------+\n" +
-				$"| {"User".PadRight(len)} | Count |\n" +
-				$"+{new String('-', len + 2)}+-------+\n";
-
-			foreach (var item in messages)
-			{
-				strBuilder += "| " + item.name.PadRight(len) + " | " + item.count.ToString().PadLeft(5) + " |\n";
-			}
-
-			strBuilder += $"+{new String('-', len + 2)}+-------+";
-			embed.WithTitle("Stat Leaderboard")
-				.WithDescription(description)
-				.WithFooter(footer => footer.Text = footerText)
-				.AddField(days == null ? "All-Time" : $"Last {days} Days", "```\n" + strBuilder + "```")
-				.WithColor(Color.DarkPurple);
-
-			return embed.Build();
-
+			_db.Dispose();
+			await command.RespondAsync(embed: embedbuilt, ephemeral: true);
+			return;
 		}
 		private Task Log(LogSeverity logSeverity, string source, string message)
 		{

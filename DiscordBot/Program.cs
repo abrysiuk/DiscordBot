@@ -3,7 +3,6 @@ using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Discord.Net;
-using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
 using Discord.Rest;
 namespace DiscordBot
@@ -76,6 +75,7 @@ namespace DiscordBot
 				.AddChoice("I mean", 1)
 				.AddChoice("Game Pass", 2)
 				.AddChoice("Regrets", 3)
+				.AddChoice("Messages", 4)
 				.WithType(ApplicationCommandOptionType.Integer)
 				);
 			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
@@ -84,6 +84,12 @@ namespace DiscordBot
 				.WithRequired(false)
 				.WithType(ApplicationCommandOptionType.Integer)
 				.WithMinValue(0)
+				);
+			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
+				.WithName("normalize")
+				.WithDescription("Show stat per 1000 messages?")
+				.WithRequired(false)
+				.WithType(ApplicationCommandOptionType.Boolean)
 				);
 			leaderboardCommand.WithDMPermission(false);
 
@@ -116,8 +122,7 @@ namespace DiscordBot
 			}
 			catch (HttpException exception)
 			{
-				var json = JsonConvert.SerializeObject(exception.Errors);
-				await Log(LogSeverity.Error, "Command Builder", $"Error occured while building commands: {json}");
+				await Log(LogSeverity.Error, "Command Builder", $"Error occured while building commands: {exception.Message}");
 			}
 			return;
 		}
