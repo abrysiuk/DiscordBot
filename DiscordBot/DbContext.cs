@@ -6,6 +6,7 @@ namespace DiscordBot
         public DbSet<DiscordMessage> UserMessages { get; set; }
         public DbSet<DiscordShame> DiscordShame { get; set; }
         public DbSet<BirthdayDef> BirthdayDefs { get; set; }
+        public DbSet<DiscordGuildUser> GuildUsers { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder

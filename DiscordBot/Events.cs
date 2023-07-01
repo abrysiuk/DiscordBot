@@ -25,9 +25,69 @@ namespace DiscordBot
 			_client.MessageUpdated += UpdateMessage;
 			_client.MessageDeleted += DeleteMessage;
 			_client.SlashCommandExecuted += SlashCommandHandler;
-			BuildCommands();
+			_client.GuildMembersDownloaded += MembersDownloaded;
+			_client.GuildMemberUpdated += MemberDownloaded;
+			_client.UserJoined += MemberJoined;
+			_ = BuildCommands();
+			_ = SetStatus();
 			return Task.CompletedTask;
 		}
+
+		private async Task MembersDownloaded(SocketGuild guild)
+		{
+			List<SocketGuildUser> members;
+
+			if (guild == null) { return; }
+
+			if (guild.HasAllMembers)
+			{
+				members = guild.Users.ToList();
+			}
+			else
+			{
+				members = await guild.GetUsersAsync().Flatten().Cast<SocketGuildUser>().ToListAsync();
+			}
+
+			var _db = new AppDBContext();
+			var discordMembers = _db.GuildUsers.Where(x => x.GuildId == guild.Id).ToList();
+
+			foreach (var member in members)
+			{
+				var temp = discordMembers.Find(x => x.Id == member.Id);
+				if (temp != null)
+				{
+					temp = member;
+				}
+				else
+				{
+					_db.GuildUsers.Add(member);
+				}
+
+
+			}
+			_db.SaveChanges();
+			return;
+		}
+
+		private async Task MemberDownloaded(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser user)
+		{
+			await MemberJoined(user);
+			return;
+		}
+
+		private async Task MemberJoined(SocketGuildUser user)
+		{
+			var _db = new AppDBContext();
+			var member = await _db.GuildUsers.FindAsync(user.Id);
+			if (member == null) { _db.GuildUsers.Add(user); }
+			else
+			{
+				member = user;
+			}
+			_db.SaveChanges();
+			return;
+		}
+
 		private async Task LatencyUpdated(int a, int b)
 		{
 			var _db = new AppDBContext();
@@ -39,14 +99,12 @@ namespace DiscordBot
 
 				var user = guild.GetUser(x.UserId);
 				if (user == null) { return; }
-				await Log(LogSeverity.Debug, "Debug", $"Birthday Event {user.Mention} {x.Date}");
-				//await guild.SystemChannel.SendMessageAsync($"Happy Birthday {user.Mention}!", allowedMentions: AllowedMentions.All);
+				await guild.SystemChannel.SendMessageAsync($"Happy Birthday {user.Mention}!");
 				x.Date = x.Date.AddYears(1);
-				await Log(LogSeverity.Debug, "Debug", $"Birthday Follow up {user.Mention} {x.Date}");
 			});
 
 			await _db.SaveChangesAsync();
-			_db.Dispose();
+			
 		}
 		private async Task ReceiveMessage(IMessage message)
 		{
@@ -59,7 +117,7 @@ namespace DiscordBot
 				await Shame(iuMessage, msg.DiscordShames);
 				_db.UserMessages.Add(msg);
 				_db.SaveChanges();
-				_db.Dispose();
+				
 			}
 		}
 		private async Task UpdateMessage(Cacheable<IMessage, ulong> oldMessage, IMessage newMessage, IMessageChannel channel)
@@ -72,6 +130,8 @@ namespace DiscordBot
 				if (msg != null && string.IsNullOrEmpty(oldMsg)) oldMsg = msg.CleanContent;
 
 				if (oldMsg == string.Empty) { oldMsg = "Unknown"; }
+
+				var guild = (IGuildChannel)channel;
 
 				if (msg == null)
 				{
@@ -93,20 +153,20 @@ namespace DiscordBot
 				}
 
 				var shameChannel = (await ((IGuildChannel)(newMessage).Channel).Guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame")); ;
-
+				var author = (IGuildUser)newMessage.Author;
 				if (shameChannel != null && oldMsg != newMessage.CleanContent)
 				{
 					EmbedBuilder embed = new();
 					embed.AddField("Original Message", oldMsg)
 						.AddField("Edited Message", newMessage.CleanContent)
-						.WithFooter(footer => footer.Text = $"In #{newMessage.Channel.Name} by {((IGuildUser)newMessage.Author).Nickname ?? newMessage.Author.Username}")
+						.WithFooter(footer => footer.Text = $"In #{newMessage.Channel.Name}")
 						.WithColor(Color.Orange);
-					if (newMessage.Author != null) embed.WithAuthor(newMessage.Author);
+					if (author != null) embed.Author = new EmbedAuthorBuilder().WithName(GetUserName(author)).WithIconUrl(author.GetDisplayAvatarUrl() ?? author.GetDefaultAvatarUrl());
 					await shameChannel.SendMessageAsync(embed: embed.Build());
 				}
 
 				_db.SaveChanges();
-				_db.Dispose();
+				_ = SetStatus();
 			}
 		}
 		private async Task DeleteMessage(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
@@ -148,7 +208,7 @@ namespace DiscordBot
 				}
 				_db.SaveChanges();
 			}
-			_db.Dispose();
+			
 			ITextChannel? shameChannel = null;
 
 			if (ichannel != null)
@@ -168,13 +228,14 @@ namespace DiscordBot
 			}
 			else
 			{
-				var author = (IGuildUser?)imsg?.Author ?? _client.Guilds.FirstOrDefault(x => x.Id == msg.GuildId)?.GetUser(msg.AuthorId);
-				if (author != null) embed.WithAuthor(author);
+				var author = (IGuildUser?)imsg?.Author ?? _client.Guilds.FirstOrDefault(x => x.Id == msg.GuildId)?.GetUser(msg.AuthorId ?? 0);
+				if (author != null) embed.Author = new EmbedAuthorBuilder().WithName(GetUserName(author)).WithIconUrl(author.GetDisplayAvatarUrl() ?? author.GetDefaultAvatarUrl());
 				embed.AddField("Deleted Message", $"{(String.IsNullOrEmpty(msg.CleanContent) ? "<No normal text>" : msg.CleanContent)}")
 					.WithColor(Color.Red)
-					.WithFooter(footer => footer.Text = $"In #{ichannel?.Name ?? "Unknown"} by {author?.Nickname ?? author?.Username ?? "Unknown"}");
+					.WithFooter(footer => footer.Text = $"In #{ichannel?.Name ?? "Unknown"}");
 			}
 			await shameChannel.SendMessageAsync(embed: embed.Build());
+			_ = SetStatus();
 		}
 		private async Task SlashCommandHandler(ISlashCommandInteraction command)
 		{
@@ -182,19 +243,19 @@ namespace DiscordBot
 			{
 				case "leaderboard":
 					await LeaderboardCommand(command);
-					break;
+					return;
 
 				case "birthday":
 					if (command.GuildId == null)
 					{
 						await command.RespondAsync("Please don't DM me. We're not friends.", ephemeral: true);
-						break;
+						return;
 					}
 					var user = (IUser)command.Data.Options.First(x => x.Name == "user").Value;
 					if (user == null)
 					{
 						await command.RespondAsync("Sorry, I couldn't find that user", ephemeral: true);
-						break;
+						return;
 					}
 					var month = (long?)command.Data.Options.First(x => x.Name == "month").Value;
 					var day = (long?)command.Data.Options.First(x => x.Name == "day").Value;
@@ -202,19 +263,19 @@ namespace DiscordBot
 					if (month == null || day == null)
 					{
 						await command.RespondAsync("Missing day or month (which Discord shouldn't allow)", ephemeral: true);
-						break;
+						return;
 					}
 
 					if (month == 2 && day == 29)
 					{
 						await command.RespondAsync($"No one has a birthday on February 29. Fuck off and quit testing my bot.", ephemeral: true);
-						break;
+						return;
 					}
 
 					if (day > DateTime.DaysInMonth(DateTime.Now.Year, (int)month))
 					{
 						await command.RespondAsync($"You know there aren't {day} days in {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month)}.", ephemeral: true);
-						break;
+						return;
 					}
 
 					var date = new DateTime(DateTime.Now.Year, (int)month, (int)day);
@@ -229,14 +290,16 @@ namespace DiscordBot
 					bd.GuildId = (ulong)command.GuildId;
 
 					_db.SaveChanges();
-					_db.Dispose();
+					
 					await command.RespondAsync("Birthday List Updated!", ephemeral: true);
-					break;
+					return;
 			}
 		}
 
 		private async Task LeaderboardCommand(ISlashCommandInteraction command)
 		{
+			const int trunc = 17;
+
 			var stat = (long)command.Data.Options.First(x => x.Name == "stat").Value;
 			var days = (long?)command.Data.Options.FirstOrDefault(x => x.Name == "days")?.Value;
 			if (days == 0) { days = null; }
@@ -253,7 +316,8 @@ namespace DiscordBot
 			}
 
 			var guild = _client.GetGuild((ulong)command.GuildId);
-			var guildusersTask = guild.GetUsersAsync().Flatten().ToListAsync();
+			await MembersDownloaded(guild);
+			
 			EmbedBuilder embed = new();
 			var _db = new AppDBContext();
 
@@ -298,14 +362,13 @@ namespace DiscordBot
 						.GroupBy(x => x.AuthorId)
 						.Select(x => new { authorId = x.Key, total = x.Count() });
 
-					var guildusers = await guildusersTask;
-
 					var messages = shameMessages.Join(totalMessages, x => x.authorId, y => y.authorId, (x, y) => new { x.authorId, x.shames, y.total, per = x.shames * 1000.0 / y.total })
+						.Take(30)
 						.ToList()
 						.Select(x => new
 						{
 							x.authorId,
-							name = guildusers.Find(y => y.Id == x.authorId)?.Nickname ?? guildusers.Find(y => y.Id == x.authorId)?.Username ?? $"Deleted #{x.authorId}",
+							name = GetUserName(x.authorId ?? 0,guild.Id),
 							x.shames,
 							x.total,
 							x.per
@@ -315,9 +378,10 @@ namespace DiscordBot
 					if (!messages.Any())
 					{
 						embedbuilt = new EmbedBuilder().WithDescription("That stat has no tracked instances").Build();
+						break;
 					}
 
-					int len = messages.Aggregate(4, (x, y) => y.name.Length > x ? y.name.Length : x);
+					int len = Math.Min(messages.Aggregate(4, (x, y) => y.name?.Length > x ? y.name.Length : x), trunc);
 
 					string strBuilder =
 						$"+{new String('-', len + 2)}+--------+\n" +
@@ -326,7 +390,7 @@ namespace DiscordBot
 
 					foreach (var item in messages)
 					{
-						strBuilder += $"| {item.name.PadRight(len)} | {(normalize ? item.per.ToString("0.00") : item.shames.ToString()),6} |\n";
+						strBuilder += $"| {item.name?[..(item.name.Length > trunc ? trunc : item.name.Length)].PadRight(len)} | {(normalize ? item.per.ToString("0.00") : item.shames.ToString()),6} |\n";
 					}
 
 					strBuilder += $"+{new String('-', len + 2)}+--------+";
@@ -345,22 +409,21 @@ namespace DiscordBot
 					if (normalize)
 					{
 						embedbuilt = new EmbedBuilder().WithDescription("You want to know how many messages each user has sent... for every 1,000 messages they've sent? It's 1000. For everyone.").WithColor(Color.Blue).Build();
+						break;
 					}
 
 					var totalMessages = _db.UserMessages
-						.Where(x => x.GuildId == command.GuildId)
+						.Where(x => x.GuildId == command.GuildId && (days == null || x.CreatedAt >= DateTimeOffset.Now.AddDays(-(double)days)))
 						.GroupBy(x => x.AuthorId)
 						.Select(x => new { authorId = x.Key, total = x.Count() })
 						.OrderByDescending(x=>x.total)
 						.Take(30)
 						.ToList();
 
-					var guildusers = await guildusersTask;
-
 					var messages = totalMessages.Select(x => new
 						 {
 							 x.authorId,
-							 name = guildusers.Find(y => y.Id == x.authorId)?.Nickname ?? guildusers.Find(y => y.Id == x.authorId)?.Username ?? $"Deleted #{x.authorId}",
+							 name = GetUserName(x.authorId ?? 0,guild.Id),
 							 x.total
 						 })
 						.OrderByDescending(x => x.total).ToList();
@@ -368,9 +431,10 @@ namespace DiscordBot
 					if (!messages.Any())
 					{
 						embedbuilt = new EmbedBuilder().WithDescription("I don't have a single clue what has been said here.").Build();
+						break;
 					}
 
-					int len = messages.Aggregate(4, (x, y) => y.name.Length > x ? y.name.Length : x);
+					int len = Math.Min(messages.Aggregate(4, (x, y) => y.name?.Length > x ? y.name.Length : x), trunc);
 
 					string strBuilder =
 						$"+{new String('-', len + 2)}+--------+\n" +
@@ -379,7 +443,7 @@ namespace DiscordBot
 
 					foreach (var item in messages)
 					{
-						strBuilder += $"| {item.name.PadRight(len)} | {(item.total),6} |\n";
+						strBuilder += $"| {item.name?[..(item.name.Length > trunc ? trunc : item.name.Length)].PadRight(len)} | {(item.total),6} |\n";
 					}
 
 					strBuilder += $"+{new String('-', len + 2)}+--------+";
@@ -393,7 +457,7 @@ namespace DiscordBot
 					break;
 				}
 			}
-			_db.Dispose();
+			
 			await command.RespondAsync(embed: embedbuilt, ephemeral: true);
 			return;
 		}

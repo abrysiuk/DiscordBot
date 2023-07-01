@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Discord.Net;
 using Microsoft.EntityFrameworkCore;
 using Discord.Rest;
+using System;
+
 namespace DiscordBot
 {
 	public partial class Program
@@ -23,8 +25,9 @@ namespace DiscordBot
 				LogLevel = (LogSeverity)logLevel,
 				MessageCacheSize = 1024,
 				DefaultRetryMode = RetryMode.RetryRatelimit,
-				GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.Guilds,
-				UseInteractionSnowflakeDate = false
+				GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.Guilds | GatewayIntents.GuildMembers,
+				UseInteractionSnowflakeDate = false,
+				AlwaysDownloadUsers = true
 			});
 			string? apiKey = Configuration["Discord:APIKey"];
 			_client.Log += Log;
@@ -50,7 +53,16 @@ namespace DiscordBot
 							await Log(LogSeverity.Error, "User Input", "Invalid GuildId format");
 							break;
 						}
-						await ProcessGuild(guildid);
+						Console.WriteLine("Enter # of Messages per Channel (0 is no limit): ");
+						if (!int.TryParse(Console.ReadLine(), out int cnt))
+						{
+							await Log(LogSeverity.Error, "User Input", "Invalid Number format");
+							break;
+						}
+						await ProcessGuild(guildid, cnt);
+						break;
+					case "status":
+						await _client.SetGameAsync($" {Console.ReadLine()}", type: ActivityType.Playing);
 						break;
 					default:
 						await Log(LogSeverity.Error, "User Input", "Command Unknown");
@@ -126,8 +138,9 @@ namespace DiscordBot
 			}
 			return;
 		}
-		private async Task ProcessGuild(ulong guildId)
+		private async Task ProcessGuild(ulong guildId, int cnt)
 		{
+			if (cnt == 0) { cnt = int.MaxValue; }
 			var guild = _client.GetGuild(guildId);
 			if (guild == null)
 			{
@@ -135,7 +148,7 @@ namespace DiscordBot
 				return;
 			}
 
-			var channels = guild.Channels.Where(x => x.GetChannelType() == ChannelType.Text || x.GetChannelType() == ChannelType.PublicThread || x.GetChannelType() == ChannelType.PrivateThread);
+			var channels = guild.Channels.Where(x => x.GetChannelType() == ChannelType.Text || x.GetChannelType() == ChannelType.PublicThread || x.GetChannelType() == ChannelType.PrivateThread || x.GetChannelType() == ChannelType.Voice);
 
 			if (!channels.Any())
 			{
@@ -152,7 +165,7 @@ namespace DiscordBot
 				await Log(LogSeverity.Verbose, "Commands", $"Processing {channel.Name}.");
 				try
 				{
-					var messages = await channel.GetMessagesAsync(int.MaxValue).Flatten().Where(x => x is RestUserMessage).ToListAsync();
+					var messages = await channel.GetMessagesAsync(cnt).Flatten().Where(x => x is RestUserMessage).ToListAsync();
 					await Log(LogSeverity.Verbose, "Commands", $"Processing {messages.Count} messages.");
 					foreach (RestUserMessage message in messages.Cast<RestUserMessage>())
 					{
@@ -164,7 +177,7 @@ namespace DiscordBot
 						{
 							await Log(LogSeverity.Error, "GenHistory", $"{e.Message}");
 						}
-						
+
 					}
 				}
 				catch (Exception e)
@@ -174,7 +187,7 @@ namespace DiscordBot
 			}
 
 			_db.SaveChanges();
-			_db.Dispose();
+			_ = SetStatus();
 
 			return;
 		}
@@ -204,12 +217,10 @@ namespace DiscordBot
 
 			}
 		}
-
 		private async Task Shame(IUserMessage msg, ICollection<DiscordShame> discordShames)
 		{
 			var Reactions = new List<ReactionDef>
 			{
-				//<a:ditto:1075842464415494214>"
 				new ReactionDef("I mean", @"(^|[.?!;,:-])\s*i\s+mean\b", @"<a:ditto:1075842464415494214>"),
 				new ReactionDef("Game Pass", @"free\b.*game\s*pass|game\s*pass\b.*free","\uD83D\uDCB0")
 			};
@@ -219,6 +230,7 @@ namespace DiscordBot
 				if (!Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase)) { continue; }
 				if (discordShames.Where(x => x.Type == reaction.Name).Any()) { continue; }
 				discordShames.Add(new DiscordShame() { Type = reaction.Name, Date = msg.CreatedAt });
+				_ = SetStatus();
 				if (Emote.TryParse(reaction.Emote, out var emote))
 				{
 					await msg.AddReactionAsync(emote);
@@ -230,6 +242,29 @@ namespace DiscordBot
 					await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
 				}
 			}
+		}
+		private string? GetUserName(IGuildUser? user)
+		{
+			return user == null ? null : GetUserName(user.Id, user.GuildId);
+		}
+		private string? GetUserName(ulong id, ulong guildid)
+		{
+			var guild = _client.GetGuild(guildid);
+			var user = guild.Users.FirstOrDefault(x => x.Id == id);
+			if (user != null) { return user.DisplayName; }
+
+			var _db = new AppDBContext();
+			var member = _db.GuildUsers.Find(id, guildid);
+
+			return member?.Displayname ?? $"Deleted #{id}";
+
+		}
+
+		private async Task SetStatus()
+		{
+			var db = new AppDBContext();
+
+			await _client.SetGameAsync($" Shame: {db.DiscordShame.Count()}",type: ActivityType.Playing);
 		}
 	}
 }
