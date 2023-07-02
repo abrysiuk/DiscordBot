@@ -78,7 +78,7 @@ namespace DiscordBot
 		private async Task MemberJoined(SocketGuildUser user)
 		{
 			var _db = new AppDBContext();
-			var member = await _db.GuildUsers.FindAsync(user.Id);
+			var member = await _db.GuildUsers.FindAsync(user.Id, user.Guild.Id);
 			if (member == null) { _db.GuildUsers.Add(user); }
 			else
 			{
@@ -130,6 +130,11 @@ namespace DiscordBot
 				if (msg != null && string.IsNullOrEmpty(oldMsg)) oldMsg = msg.CleanContent;
 
 				if (oldMsg == string.Empty) { oldMsg = "Unknown"; }
+
+				if (oldMsg == newMessage.CleanContent)
+				{
+					return;
+				}
 
 				var guild = (IGuildChannel)channel;
 
@@ -246,54 +251,59 @@ namespace DiscordBot
 					return;
 
 				case "birthday":
-					if (command.GuildId == null)
-					{
-						await command.RespondAsync("Please don't DM me. We're not friends.", ephemeral: true);
-						return;
-					}
-					var user = (IUser)command.Data.Options.First(x => x.Name == "user").Value;
-					if (user == null)
-					{
-						await command.RespondAsync("Sorry, I couldn't find that user", ephemeral: true);
-						return;
-					}
-					var month = (long?)command.Data.Options.First(x => x.Name == "month").Value;
-					var day = (long?)command.Data.Options.First(x => x.Name == "day").Value;
-
-					if (month == null || day == null)
-					{
-						await command.RespondAsync("Missing day or month (which Discord shouldn't allow)", ephemeral: true);
-						return;
-					}
-
-					if (month == 2 && day == 29)
-					{
-						await command.RespondAsync($"No one has a birthday on February 29. Fuck off and quit testing my bot.", ephemeral: true);
-						return;
-					}
-
-					if (day > DateTime.DaysInMonth(DateTime.Now.Year, (int)month))
-					{
-						await command.RespondAsync($"You know there aren't {day} days in {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month)}.", ephemeral: true);
-						return;
-					}
-
-					var date = new DateTime(DateTime.Now.Year, (int)month, (int)day);
-
-					if (date < DateTime.Today) { date = date.AddYears(1); }
-
-					var _db = new AppDBContext();
-					var bd = _db.BirthdayDefs.Find(user.Id, command.GuildId) ?? _db.BirthdayDefs.Add(new BirthdayDef()).Entity;
-					bd.Date = date;
-					bd.CreatedBy = command.User.Username;
-					bd.UserId = user.Id;
-					bd.GuildId = (ulong)command.GuildId;
-
-					_db.SaveChanges();
-					
-					await command.RespondAsync("Birthday List Updated!", ephemeral: true);
+					await BirthdayCommand(command);
 					return;
 			}
+		}
+
+		private async Task BirthdayCommand(ISlashCommandInteraction command)
+		{
+			if (command.GuildId == null)
+			{
+				await command.RespondAsync("Please don't DM me. We're not friends.", ephemeral: true);
+				return;
+			}
+			var user = (IUser)command.Data.Options.First(x => x.Name == "user").Value;
+			if (user == null)
+			{
+				await command.RespondAsync("Sorry, I couldn't find that user", ephemeral: true);
+				return;
+			}
+			var month = (long?)command.Data.Options.First(x => x.Name == "month").Value;
+			var day = (long?)command.Data.Options.First(x => x.Name == "day").Value;
+
+			if (month == null || day == null)
+			{
+				await command.RespondAsync("Missing day or month (which Discord shouldn't allow)", ephemeral: true);
+				return;
+			}
+
+			if (month == 2 && day == 29)
+			{
+				await command.RespondAsync($"No one has a birthday on February 29. Fuck off and quit testing my bot.", ephemeral: true);
+				return;
+			}
+
+			if (day > DateTime.DaysInMonth(DateTime.Now.Year, (int)month))
+			{
+				await command.RespondAsync($"You know there aren't {day} days in {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month)}.", ephemeral: true);
+				return;
+			}
+
+			var date = new DateTime(DateTime.Now.Year, (int)month, (int)day);
+
+			if (date < DateTime.Today) { date = date.AddYears(1); }
+
+			var _db = new AppDBContext();
+			var bd = _db.BirthdayDefs.Find(user.Id, command.GuildId) ?? _db.BirthdayDefs.Add(new BirthdayDef()).Entity;
+			bd.Date = date;
+			bd.CreatedBy = command.User.Username;
+			bd.UserId = user.Id;
+			bd.GuildId = (ulong)command.GuildId;
+
+			_db.SaveChanges();
+
+			await command.RespondAsync("Birthday List Updated!", ephemeral: true);
 		}
 
 		private async Task LeaderboardCommand(ISlashCommandInteraction command)
@@ -406,16 +416,10 @@ namespace DiscordBot
 				}
 				case 4:
 				{
-					if (normalize)
-					{
-						embedbuilt = new EmbedBuilder().WithDescription("You want to know how many messages each user has sent... for every 1,000 messages they've sent? It's 1000. For everyone.").WithColor(Color.Blue).Build();
-						break;
-					}
-
 					var totalMessages = _db.UserMessages
 						.Where(x => x.GuildId == command.GuildId && (days == null || x.CreatedAt >= DateTimeOffset.Now.AddDays(-(double)days)))
 						.GroupBy(x => x.AuthorId)
-						.Select(x => new { authorId = x.Key, total = x.Count() })
+						.Select(x => new { authorId = x.Key, total = x.Count(), days = x.OrderBy(y => y.CreatedAt).Last().CreatedAt.Date - x.OrderBy(y => y.CreatedAt).First().CreatedAt.Date})
 						.OrderByDescending(x=>x.total)
 						.Take(30)
 						.ToList();
@@ -424,9 +428,10 @@ namespace DiscordBot
 						 {
 							 x.authorId,
 							 name = GetUserName(x.authorId ?? 0,guild.Id),
-							 x.total
+							 x.total,
+							 TotalDays = x.days.TotalDays + 1
 						 })
-						.OrderByDescending(x => x.total).ToList();
+						.OrderByDescending(x => normalize ? x.total / x.TotalDays : x.total).ToList();
 
 					if (!messages.Any())
 					{
@@ -437,16 +442,16 @@ namespace DiscordBot
 					int len = Math.Min(messages.Aggregate(4, (x, y) => y.name?.Length > x ? y.name.Length : x), trunc);
 
 					string strBuilder =
-						$"+{new String('-', len + 2)}+--------+\n" +
-						$"| {"User".PadRight(len)} |  Count |\n" +
-						$"+{new String('-', len + 2)}+--------+\n";
+						$"+{new String('-', len + 2)}+---------+\n" +
+						$"| {"User".PadRight(len)} | {(normalize ? "Per Day" : "Count"),7} |\n" +
+						$"+{new String('-', len + 2)}+---------+\n";
 
 					foreach (var item in messages)
 					{
-						strBuilder += $"| {item.name?[..(item.name.Length > trunc ? trunc : item.name.Length)].PadRight(len)} | {(item.total),6} |\n";
+						strBuilder += $"| {item.name?[..(item.name.Length > trunc ? trunc : item.name.Length)].PadRight(len)} | {(normalize ? (item.total / item.TotalDays).ToString("0.00") : item.total),7} |\n";
 					}
 
-					strBuilder += $"+{new String('-', len + 2)}+--------+";
+					strBuilder += $"+{new String('-', len + 2)}+---------+";
 					embed.WithTitle("Stat Leaderboard")
 						.WithDescription(description)
 						.WithFooter(footer => footer.Text = footerText)

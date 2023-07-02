@@ -99,7 +99,7 @@ namespace DiscordBot
 				);
 			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
 				.WithName("normalize")
-				.WithDescription("Show stat per 1000 messages?")
+				.WithDescription("Show stat as a function of messages/time?")
 				.WithRequired(false)
 				.WithType(ApplicationCommandOptionType.Boolean)
 				);
