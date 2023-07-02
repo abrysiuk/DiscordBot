@@ -73,6 +73,25 @@ namespace DiscordBot
 				.WithMinValue(1)
 				.WithMaxValue(31)
 				);
+			SlashCommandOptionBuilder TimeZoneOption = new SlashCommandOptionBuilder()
+				.WithName("timezone")
+				.WithDescription("What timezone is the user in?")
+				.WithRequired(true)
+				.WithType(ApplicationCommandOptionType.String)
+				.WithAutocomplete(true);
+
+			TimeZoneOption.AddChoice($"Hawaiian Standard Time (-10:00:00", "Hawaiian Standard Time");
+			TimeZoneOption.AddChoice($"Alaskan Standard Time (-09:00:00)", "Alaskan Standard Time");
+			TimeZoneOption.AddChoice($"Pacific Standard Time (-08:00:00)", "Pacific Standard Time");
+			TimeZoneOption.AddChoice($"US Mountain Standard Time (-07:00:00)", "US Mountain Standard");
+			TimeZoneOption.AddChoice($"Mountain Standard Time (-07:00:00)", "Mountain Standard Time");
+			TimeZoneOption.AddChoice($"Central Standard Time (-06:00:00)", "Central Standard Time");
+			TimeZoneOption.AddChoice($"Canada Central Standard Time (-06:00:00)", "Canada Central Standard Time");
+			TimeZoneOption.AddChoice($"Eastern Standard Time (-05:00:00)", "Eastern Standard Time");
+			TimeZoneOption.AddChoice($"US Eastern Standard Time (-05:00:00)", "US Eastern Standard Time");
+			TimeZoneOption.AddChoice($"Atlantic Standard Time (-04:00:00)", "Atlantic Standard Time");
+			BirthdayCommand.AddOption(TimeZoneOption);
+
 			try
 			{
 				await _client.CreateGlobalApplicationCommandAsync(leaderboardCommand.Build());
@@ -84,9 +103,9 @@ namespace DiscordBot
 			}
 			return;
 		}
-		private async Task ProcessGuild(ulong guildId, int cnt)
+		private async Task ProcessGuild(ulong guildId, int? cnt = null)
 		{
-			if (cnt == 0) { cnt = int.MaxValue; }
+			if (cnt != null && cnt == 0) { cnt = int.MaxValue; }
 			var guild = _client.GetGuild(guildId);
 			if (guild == null)
 			{
@@ -108,10 +127,39 @@ namespace DiscordBot
 
 			foreach (ITextChannel channel in channels.Cast<ITextChannel>())
 			{
-				await Log(LogSeverity.Verbose, "Commands", $"Processing {channel.Name}.");
 				try
 				{
-					var messages = await channel.GetMessagesAsync(cnt).Flatten().Where(x => x is RestUserMessage).ToListAsync();
+					await Log(LogSeverity.Verbose, "Commands", $"Processing {channel.Name}.");
+					List<IMessage> messages;
+					int count;
+					if (cnt == null)
+					{
+						var lastMessage = await channel.GetMessagesAsync(1).FlattenAsync();
+						var lastDBmessages = _db.UserMessages.Where(x => x.ChannelId == channel.Id);
+						var lastDBmessage = lastDBmessages.Any() ? lastDBmessages.OrderByDescending(x => x.CreatedAt).First() : null;
+
+						if (!lastMessage.Any()) { continue; }
+
+						if (lastDBmessage != null)
+						{
+							if (lastMessage.First().Id == lastDBmessage.Id)
+							{
+								continue;
+							}
+
+							messages = await channel.GetMessagesAsync(lastMessage.First(), Direction.After, int.MaxValue).Flatten().Where(x => x is RestUserMessage).ToListAsync();
+						}
+
+						else
+						{
+							messages = await channel.GetMessagesAsync(int.MaxValue).Flatten().Where(x => x is RestUserMessage).ToListAsync();
+						}
+					}
+					else
+					{
+						count = cnt.Value;
+						messages = await channel.GetMessagesAsync(count).Flatten().Where(x => x is RestUserMessage).ToListAsync();
+					}
 					await Log(LogSeverity.Verbose, "Commands", $"Processing {messages.Count} messages.");
 					foreach (RestUserMessage message in messages.Cast<RestUserMessage>())
 					{
@@ -128,12 +176,12 @@ namespace DiscordBot
 				}
 				catch (Exception e)
 				{
-					await Log(LogSeverity.Error, "GenHistory", $"{e.Message}");
+					await Log(LogSeverity.Error, "GenHistory", $"{e.ToString()}");
 				}
 			}
 
 			_db.SaveChanges();
-			_ = SetStatus();
+			await SetStatus();
 
 			return;
 		}
@@ -165,7 +213,7 @@ namespace DiscordBot
 		}
 		#endregion
 		#region Slash Commands
-		private async Task BirthdayCommand(ISlashCommandInteraction command)
+		private static async Task BirthdayCommand(ISlashCommandInteraction command)
 		{
 			if (command.GuildId == null)
 			{

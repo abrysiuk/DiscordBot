@@ -14,11 +14,11 @@ namespace DiscordBot
 {
 	public partial class Program
 	{
-		public Task Ready()
+		public async Task Ready()
 		{
 			if (_client == null)
 			{
-				return Task.CompletedTask;
+				return;
 			}
 			_client.LatencyUpdated += LatencyUpdated;
 			_client.MessageReceived += ReceiveMessage;
@@ -28,9 +28,15 @@ namespace DiscordBot
 			_client.GuildMembersDownloaded += MembersDownloaded;
 			_client.GuildMemberUpdated += MemberDownloaded;
 			_client.UserJoined += MemberJoined;
-			_ = BuildCommands();
-			_ = SetStatus();
-			return Task.CompletedTask;
+			_client.GuildAvailable += GuildAvailable;
+			await BuildCommands();
+			await SetStatus();
+			return;
+		}
+
+		private async Task GuildAvailable(SocketGuild guild)
+		{
+			await ProcessGuild(guild.Id);
 		}
 
 		private async Task MembersDownloaded(SocketGuild guild)
@@ -91,19 +97,18 @@ namespace DiscordBot
 		private async Task LatencyUpdated(int a, int b)
 		{
 			var _db = new AppDBContext();
-			var birthdays = await _db.BirthdayDefs.Where(x => x.Date.Date == DateTime.Today).ToListAsync();
-			birthdays.ForEach(async x =>
+			var birthdays = _db.BirthdayDefs.ToList().Where(x => x.Date.Date == TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.Today, x.TimeZone).Date);
+			foreach (var birthday in birthdays)
 			{
-				var guild = _client.GetGuild(x.GuildId);
+				var guild = _client.GetGuild(birthday.GuildId);
 				if (guild == null) { return; }
 
-				var user = guild.GetUser(x.UserId);
+				var user = guild.GetUser(birthday.UserId);
 				if (user == null) { return; }
+				birthday.Date = birthday.Date.AddYears(1);
+				_db.SaveChanges();
 				await guild.SystemChannel.SendMessageAsync($"Happy Birthday {user.Mention}!");
-				x.Date = x.Date.AddYears(1);
-			});
-
-			await _db.SaveChangesAsync();
+			}
 			
 		}
 		private async Task ReceiveMessage(IMessage message)
@@ -171,7 +176,7 @@ namespace DiscordBot
 				}
 
 				_db.SaveChanges();
-				_ = SetStatus();
+				await SetStatus();
 			}
 		}
 		private async Task DeleteMessage(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
@@ -240,7 +245,7 @@ namespace DiscordBot
 					.WithFooter(footer => footer.Text = $"In #{ichannel?.Name ?? "Unknown"}");
 			}
 			await shameChannel.SendMessageAsync(embed: embed.Build());
-			_ = SetStatus();
+			await SetStatus();
 		}
 		private async Task SlashCommandHandler(ISlashCommandInteraction command)
 		{

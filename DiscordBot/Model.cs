@@ -142,12 +142,14 @@ namespace DiscordBot
 		public ulong UserId { get; set; }
 		[DatabaseGenerated(DatabaseGeneratedOption.None)]
 		public ulong GuildId { get; set; }
+		public string TimeZone { get; set; }
 		public BirthdayDef()
 		{
 			CreatedBy = string.Empty;
 			Date = DateTime.MinValue;
 			UserId = ulong.MinValue;
 			GuildId = ulong.MinValue;
+			TimeZone = TimeZoneInfo.Local.Id;
 		}
 	}
 }

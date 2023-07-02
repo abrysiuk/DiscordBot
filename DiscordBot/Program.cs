@@ -54,10 +54,15 @@ namespace DiscordBot
 							break;
 						}
 						Console.WriteLine("Enter # of Messages per Channel (0 is no limit): ");
-						if (!int.TryParse(Console.ReadLine(), out int cnt))
+						int? cnt;
+						if (!int.TryParse(Console.ReadLine(), out int input))
 						{
-							await Log(LogSeverity.Error, "User Input", "Invalid Number format");
-							break;
+							await Log(LogSeverity.Info, "User Input", "Generating messages since last heard");
+							cnt = null;
+						}
+						else
+						{
+							cnt = input;
 						}
 						await ProcessGuild(guildid, cnt);
 						break;
@@ -84,7 +89,7 @@ namespace DiscordBot
 				if (!Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase)) { continue; }
 				if (discordShames.Where(x => x.Type == reaction.Name).Any()) { continue; }
 				discordShames.Add(new DiscordShame() { Type = reaction.Name, Date = msg.CreatedAt });
-				_ = SetStatus();
+				await SetStatus();
 				if (Emote.TryParse(reaction.Emote, out var emote))
 				{
 					await msg.AddReactionAsync(emote);
