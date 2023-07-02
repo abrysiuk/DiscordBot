@@ -47,7 +47,7 @@ namespace DiscordBot
 						await BuildCommands();
 						break;
 					case "genhistory":
-						Console.WriteLine("Enter Guild ID: ");
+						Console.WriteLine("Enter Guild ID:");
 						if (!ulong.TryParse(Console.ReadLine(), out ulong guildid))
 						{
 							await Log(LogSeverity.Error, "User Input", "Invalid GuildId format");
@@ -62,159 +62,13 @@ namespace DiscordBot
 						await ProcessGuild(guildid, cnt);
 						break;
 					case "status":
+						Console.WriteLine($"Enter Custom Status:");
 						await _client.SetGameAsync($" {Console.ReadLine()}", type: ActivityType.Playing);
 						break;
 					default:
 						await Log(LogSeverity.Error, "User Input", "Command Unknown");
 						break;
 				}
-			}
-		}
-		private async Task BuildCommands()
-		{
-			if (_client == null)
-			{
-				await Log(LogSeverity.Error, "Commands", "Command requested while client is not connected.");
-				return;
-			}
-			var leaderboardCommand = new SlashCommandBuilder();
-			leaderboardCommand.WithName("leaderboard");
-			leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by ShameBot");
-			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
-				.WithName("stat")
-				.WithDescription("What stat would you like to report on?")
-				.WithRequired(true)
-				.AddChoice("I mean", 1)
-				.AddChoice("Game Pass", 2)
-				.AddChoice("Regrets", 3)
-				.AddChoice("Messages", 4)
-				.WithType(ApplicationCommandOptionType.Integer)
-				);
-			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
-				.WithName("days")
-				.WithDescription("How many days back would you like to go? (Optional, default all-time)")
-				.WithRequired(false)
-				.WithType(ApplicationCommandOptionType.Integer)
-				.WithMinValue(0)
-				);
-			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
-				.WithName("normalize")
-				.WithDescription("Show stat as a function of messages/time?")
-				.WithRequired(false)
-				.WithType(ApplicationCommandOptionType.Boolean)
-				);
-			leaderboardCommand.WithDMPermission(false);
-
-			var BirthdayCommand = new SlashCommandBuilder();
-			BirthdayCommand.WithName("birthday").WithDescription("Add a birthday to the database").WithDefaultMemberPermissions(GuildPermission.Administrator).WithDMPermission(false).AddOption(new SlashCommandOptionBuilder()
-				.WithName("user")
-				.WithDescription("Who's birthday do you want to set?")
-				.WithRequired(true)
-				.WithType(ApplicationCommandOptionType.User));
-			BirthdayCommand.AddOption(new SlashCommandOptionBuilder()
-				.WithName("month")
-				.WithDescription("What month is their birthday?")
-				.WithRequired(true)
-				.WithType(ApplicationCommandOptionType.Integer)
-				.WithMinValue(1)
-				.WithMaxValue(12)
-				);
-			BirthdayCommand.AddOption(new SlashCommandOptionBuilder()
-				.WithName("day")
-				.WithDescription("What day is their birthday?")
-				.WithRequired(true)
-				.WithType(ApplicationCommandOptionType.Integer)
-				.WithMinValue(1)
-				.WithMaxValue(31)
-				);
-			try
-			{
-				await _client.CreateGlobalApplicationCommandAsync(leaderboardCommand.Build());
-				await _client.CreateGlobalApplicationCommandAsync(BirthdayCommand.Build());
-			}
-			catch (HttpException exception)
-			{
-				await Log(LogSeverity.Error, "Command Builder", $"Error occured while building commands: {exception.Message}");
-			}
-			return;
-		}
-		private async Task ProcessGuild(ulong guildId, int cnt)
-		{
-			if (cnt == 0) { cnt = int.MaxValue; }
-			var guild = _client.GetGuild(guildId);
-			if (guild == null)
-			{
-				await Log(LogSeverity.Warning, "Process Messages", $"Cannot find guild {guildId}");
-				return;
-			}
-
-			var channels = guild.Channels.Where(x => x.GetChannelType() == ChannelType.Text || x.GetChannelType() == ChannelType.PublicThread || x.GetChannelType() == ChannelType.PrivateThread || x.GetChannelType() == ChannelType.Voice);
-
-			if (!channels.Any())
-			{
-				await Log(LogSeverity.Warning, "Process Messages", $"Guild {guildId} has no text channels available.");
-				return;
-			}
-
-			await Log(LogSeverity.Verbose, "Commands", $"Found {channels.Count()} channels");
-
-			var _db = new AppDBContext();
-
-			foreach (ITextChannel channel in channels.Cast<ITextChannel>())
-			{
-				await Log(LogSeverity.Verbose, "Commands", $"Processing {channel.Name}.");
-				try
-				{
-					var messages = await channel.GetMessagesAsync(cnt).Flatten().Where(x => x is RestUserMessage).ToListAsync();
-					await Log(LogSeverity.Verbose, "Commands", $"Processing {messages.Count} messages.");
-					foreach (RestUserMessage message in messages.Cast<RestUserMessage>())
-					{
-						try
-						{
-							await ProcessMessage(message, channel, _db);
-						}
-						catch (Exception e)
-						{
-							await Log(LogSeverity.Error, "GenHistory", $"{e.Message}");
-						}
-
-					}
-				}
-				catch (Exception e)
-				{
-					await Log(LogSeverity.Error, "GenHistory", $"{e.Message}");
-				}
-			}
-
-			_db.SaveChanges();
-			_ = SetStatus();
-
-			return;
-		}
-		private async Task ProcessMessage(IUserMessage Message, IGuildChannel channel, AppDBContext _db)
-		{
-			if (Message is RestUserMessage suMessage && Message != null)
-			{
-				DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordShames).FirstOrDefault(s => s.Id == Message.Id);
-				if (msg == null)
-				{
-					msg = suMessage;
-					msg.GuildId = channel.Guild.Id;
-					msg.DiscordShames = new List<DiscordShame>();
-					_db.UserMessages.Add(msg);
-				}
-				else
-				{
-					_db.Entry(msg).CurrentValues.SetValues((DiscordMessage)suMessage);
-					msg.GuildId = channel.Guild.Id;
-				}
-				await Shame(suMessage, msg.DiscordShames);
-
-				if (msg.EditedTimestamp != null && !msg.DiscordShames.Any(x => x.MessageId == msg.Id && x.Type == "Edit"))
-				{
-					msg.DiscordShames.Add(new DiscordShame() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.EditedTimestamp ?? DateTimeOffset.Now });
-				}
-
 			}
 		}
 		private async Task Shame(IUserMessage msg, ICollection<DiscordShame> discordShames)
