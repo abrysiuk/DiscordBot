@@ -2,13 +2,12 @@
 using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
-using Discord.Net;
-using Microsoft.EntityFrameworkCore;
-using Discord.Rest;
-using System;
 
 namespace DiscordBot
 {
+	/// <summary>
+	/// Main DiscordBot class
+	/// </summary>
 	public partial class Program
 	{
 		public static IConfiguration Configuration => new ConfigurationBuilder().AddUserSecrets<Program>().Build();
@@ -30,6 +29,14 @@ namespace DiscordBot
 				AlwaysDownloadUsers = true
 			});
 			string? apiKey = Configuration["Discord:APIKey"];
+			_client.LatencyUpdated += LatencyUpdated;
+			_client.MessageReceived += ReceiveMessage;
+			_client.MessageUpdated += UpdateMessage;
+			_client.MessageDeleted += DeleteMessage;
+			_client.SlashCommandExecuted += SlashCommandHandler;
+			_client.GuildMembersDownloaded += MembersDownloaded;
+			_client.GuildMemberUpdated += MemberDownloaded;
+			_client.UserJoined += MemberJoined;
 			_client.Log += Log;
 			_client.Ready += Ready;
 			await _client.LoginAsync(TokenType.Bot, apiKey);
@@ -76,29 +83,50 @@ namespace DiscordBot
 				}
 			}
 		}
-		private async Task Shame(IUserMessage msg, ICollection<DiscordShame> discordShames)
+		private async Task React(IUserMessage msg, ICollection<DiscordShame> discordShames)
 		{
 			var Reactions = new List<ReactionDef>
 			{
 				new ReactionDef("I mean", @"(^|[.?!;,:-])\s*i\s+mean\b", @"<a:ditto:1075842464415494214>"),
 				new ReactionDef("Game Pass", @"free\b.*game\s*pass|game\s*pass\b.*free","\uD83D\uDCB0")
 			};
-
 			foreach (ReactionDef reaction in Reactions)
 			{
 				if (!Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase)) { continue; }
-				if (discordShames.Where(x => x.Type == reaction.Name).Any()) { continue; }
-				discordShames.Add(new DiscordShame() { Type = reaction.Name, Date = msg.CreatedAt });
+				if (!discordShames.Where(x => x.Type == reaction.Name).Any())
+				{
+					discordShames.Add(new DiscordShame() { Type = reaction.Name, Date = msg.CreatedAt });
+				}
+
 				await SetStatus();
+
+				var channel = (IGuildChannel)msg.Channel;
+				IGuild guild = channel.Guild;
+				ChannelPermissions channelPerms = (await guild.GetCurrentUserAsync()).GetPermissions(channel);
+
+				if (!channelPerms.ViewChannel || !channelPerms.AddReactions)
+				{
+					await Log(LogSeverity.Verbose, "Bot", $"Can't react to {msg.Author.Username}:{msg.Content} in #{channel.Name}");
+					continue;
+				}
+
 				if (Emote.TryParse(reaction.Emote, out var emote))
 				{
+					if (msg.Reactions.Any(x => ((Emote)x.Key).Id == emote.Id && x.Value.IsMe))
+					{
+						continue;
+					}
 					await msg.AddReactionAsync(emote);
-					await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
+					await Log(LogSeverity.Debug, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
 				}
 				else if (Emoji.TryParse(reaction.Emote, out var emoji))
 				{
+					if (msg.Reactions.Any(x => ((Emoji)x.Key).Name == emote.Name && x.Value.IsMe))
+					{
+						continue;
+					}
 					await msg.AddReactionAsync(emoji);
-					await Log(LogSeverity.Verbose, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
+					await Log(LogSeverity.Debug, "Bot", $"{reaction.Name} {msg.Author.Username}:{msg.Content}");
 				}
 			}
 		}

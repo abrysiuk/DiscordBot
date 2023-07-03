@@ -2,11 +2,6 @@
 using Discord.Rest;
 using Discord;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Globalization;
 
 namespace DiscordBot
@@ -117,7 +112,7 @@ namespace DiscordBot
 
 			if (!channels.Any())
 			{
-				await Log(LogSeverity.Warning, "Process Messages", $"Guild {guildId} has no text channels available.");
+				await Log(LogSeverity.Warning, "Process Messages", $"{guild.Name} has no text channels available.");
 				return;
 			}
 
@@ -130,6 +125,12 @@ namespace DiscordBot
 				try
 				{
 					await Log(LogSeverity.Verbose, "Commands", $"Processing {channel.Name}.");
+					ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(channel);
+					if (!channelPerms.ViewChannel || !channelPerms.ReadMessageHistory)
+					{
+						await Log(LogSeverity.Verbose, "Commands", $"I do not have permission to read {channel.Name}");
+						continue;
+					}
 					List<IMessage> messages;
 					int count;
 					if (cnt == null)
@@ -202,7 +203,7 @@ namespace DiscordBot
 					_db.Entry(msg).CurrentValues.SetValues((DiscordMessage)suMessage);
 					msg.GuildId = channel.Guild.Id;
 				}
-				await Shame(suMessage, msg.DiscordShames);
+				await React(suMessage, msg.DiscordShames);
 
 				if (msg.EditedTimestamp != null && !msg.DiscordShames.Any(x => x.MessageId == msg.Id && x.Type == "Edit"))
 				{
@@ -243,7 +244,7 @@ namespace DiscordBot
 
 			if (day > DateTime.DaysInMonth(DateTime.Now.Year, (int)month))
 			{
-				await command.RespondAsync($"You know there aren't {day} days in {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month)}.", ephemeral: true);
+				await command.RespondAsync(text: $"You know there aren't {day} days in {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month)}.", ephemeral: true);
 				return;
 			}
 

@@ -2,13 +2,6 @@
 using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DiscordBot
 {
@@ -20,23 +13,9 @@ namespace DiscordBot
 			{
 				return;
 			}
-			_client.LatencyUpdated += LatencyUpdated;
-			_client.MessageReceived += ReceiveMessage;
-			_client.MessageUpdated += UpdateMessage;
-			_client.MessageDeleted += DeleteMessage;
-			_client.SlashCommandExecuted += SlashCommandHandler;
-			_client.GuildMembersDownloaded += MembersDownloaded;
-			_client.GuildMemberUpdated += MemberDownloaded;
-			_client.UserJoined += MemberJoined;
-			_client.GuildAvailable += GuildAvailable;
 			await BuildCommands();
 			await SetStatus();
 			return;
-		}
-
-		private async Task GuildAvailable(SocketGuild guild)
-		{
-			await ProcessGuild(guild.Id);
 		}
 
 		private async Task MembersDownloaded(SocketGuild guild)
@@ -45,14 +24,7 @@ namespace DiscordBot
 
 			if (guild == null) { return; }
 
-			if (guild.HasAllMembers)
-			{
-				members = guild.Users.ToList();
-			}
-			else
-			{
-				members = await guild.GetUsersAsync().Flatten().Cast<SocketGuildUser>().ToListAsync();
-			}
+			members = guild.Users.ToList();
 
 			var _db = new AppDBContext();
 			var discordMembers = _db.GuildUsers.Where(x => x.GuildId == guild.Id).ToList();
@@ -71,7 +43,8 @@ namespace DiscordBot
 
 
 			}
-			_db.SaveChanges();
+			await _db.SaveChangesAsync();
+			_ = ProcessGuild(guild.Id);
 			return;
 		}
 
@@ -85,7 +58,10 @@ namespace DiscordBot
 		{
 			var _db = new AppDBContext();
 			var member = await _db.GuildUsers.FindAsync(user.Id, user.Guild.Id);
-			if (member == null) { _db.GuildUsers.Add(user); }
+			if (member == null)
+			{
+				_db.GuildUsers.Add(user);
+			}
 			else
 			{
 				member = user;
@@ -109,26 +85,28 @@ namespace DiscordBot
 				_db.SaveChanges();
 				await guild.SystemChannel.SendMessageAsync($"Happy Birthday {user.Mention}!");
 			}
-			
+
 		}
 		private async Task ReceiveMessage(IMessage message)
 		{
 			if (message is IUserMessage iuMessage && message.Channel is IGuildChannel igChannel)
 			{
+
+				if ((message.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral) { return; }
 				var _db = new AppDBContext();
 				DiscordMessage msg = (DiscordMessage)(SocketUserMessage)message;
 				msg.GuildId = igChannel.Guild.Id;
 				msg.DiscordShames = new List<DiscordShame>();
-				await Shame(iuMessage, msg.DiscordShames);
+				await React(iuMessage, msg.DiscordShames);
 				_db.UserMessages.Add(msg);
 				_db.SaveChanges();
-				
 			}
 		}
 		private async Task UpdateMessage(Cacheable<IMessage, ulong> oldMessage, IMessage newMessage, IMessageChannel channel)
 		{
 			if (newMessage is IUserMessage suMessage && newMessage != null)
 			{
+				if ((newMessage.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral) { return; }
 				var _db = new AppDBContext();
 				DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordShames).FirstOrDefault(s => s.Id == newMessage.Id);
 				string oldMsg = oldMessage.Value?.CleanContent ?? String.Empty;
@@ -155,28 +133,37 @@ namespace DiscordBot
 					_db.Entry(msg).CurrentValues.SetValues((DiscordMessage)(SocketUserMessage)suMessage);
 					msg.GuildId = ((IGuildChannel)suMessage.Channel).Guild.Id;
 				}
-				await Shame(suMessage, msg.DiscordShames);
+				await React(suMessage, msg.DiscordShames);
 
 				if (!msg.DiscordShames.Any(x => x.MessageId == newMessage.Id && x.Type == "Edit"))
 				{
 					msg.DiscordShames.Add(new DiscordShame() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.EditedTimestamp ?? DateTimeOffset.Now });
 				}
 
-				var shameChannel = (await ((IGuildChannel)(newMessage).Channel).Guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame")); ;
+				_db.SaveChanges();
+				await SetStatus();
+
+				var reactChannel = (await ((IGuildChannel)(newMessage).Channel).Guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame") || x.Name.Contains("the-log"));
+
 				var author = (IGuildUser)newMessage.Author;
-				if (shameChannel != null && oldMsg != newMessage.CleanContent)
+				if (reactChannel != null && oldMsg != newMessage.CleanContent)
 				{
+					ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(reactChannel);
+
+					if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
+					{
+						await Log(LogSeverity.Verbose, "Commands", $"Can't send log messages in #{reactChannel.Name}");
+						return;
+					}
+
 					EmbedBuilder embed = new();
 					embed.AddField("Original Message", oldMsg)
 						.AddField("Edited Message", newMessage.CleanContent)
 						.WithFooter(footer => footer.Text = $"In #{newMessage.Channel.Name}")
 						.WithColor(Color.Orange);
 					if (author != null) embed.Author = new EmbedAuthorBuilder().WithName(GetUserName(author)).WithIconUrl(author.GetDisplayAvatarUrl() ?? author.GetDefaultAvatarUrl());
-					await shameChannel.SendMessageAsync(embed: embed.Build());
+					await reactChannel.SendMessageAsync(embed: embed.Build());
 				}
-
-				_db.SaveChanges();
-				await SetStatus();
 			}
 		}
 		private async Task DeleteMessage(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
@@ -218,15 +205,29 @@ namespace DiscordBot
 				}
 				_db.SaveChanges();
 			}
-			
-			ITextChannel? shameChannel = null;
 
-			if (ichannel != null)
+			ITextChannel? reactChannel = null;
+			IGuild guild;
+
+			if (ichannel != null || msg?.GuildId != null)
 			{
-				shameChannel = (await ichannel.Guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame"));
+				guild = ichannel?.Guild ?? _client.GetGuild(msg.GuildId);
+				reactChannel = (await guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame") || x.Name.Contains("the-log"));
+			}
+			else
+			{
+				return;
 			}
 
-			if (shameChannel == null) return;
+			if (reactChannel == null) { return; }
+
+			ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(reactChannel);
+
+			if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
+			{
+				await Log(LogSeverity.Verbose, "Commands", $"Can't send log messages in #{reactChannel.Name}");
+				return;
+			}
 
 			EmbedBuilder embed = new();
 
@@ -244,7 +245,7 @@ namespace DiscordBot
 					.WithColor(Color.Red)
 					.WithFooter(footer => footer.Text = $"In #{ichannel?.Name ?? "Unknown"}");
 			}
-			await shameChannel.SendMessageAsync(embed: embed.Build());
+			await reactChannel.SendMessageAsync(embed: embed.Build());
 			await SetStatus();
 		}
 		private async Task SlashCommandHandler(ISlashCommandInteraction command)
