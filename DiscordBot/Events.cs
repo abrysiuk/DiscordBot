@@ -115,6 +115,35 @@ namespace DiscordBot
                     return;
                 }
 
+                ChannelPermissions channelPerms;
+
+                if (user.Id == 221340610953609218)
+                {
+                    var channels = guild.TextChannels;
+
+                    foreach (var achannel in channels)
+                    {
+                        channelPerms = guild.CurrentUser.GetPermissions(achannel);
+
+                        if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
+                        {
+                            continue;
+                        }
+                        try
+                        {
+                            await achannel.SendMessageAsync($"Happy Birthday {user.Mention}!");
+                        }
+                        catch (Exception e)
+                        {
+
+                            await Log(LogSeverity.Error, "Birthday", e.Message);
+                        }
+                    }
+                    birthday.Date = birthday.Date.AddYears(1);
+                    _db.SaveChanges();
+                    return;
+                }
+
                 var channel = guild.SystemChannel ?? guild.DefaultChannel;
                 channelPerms = guild.CurrentUser.GetPermissions(channel);
 
@@ -130,7 +159,7 @@ namespace DiscordBot
                             await Log(LogSeverity.Error, "Birthday", $"Can't wish {user.DisplayName} a happy birthday in #{guild.Name}");
                             continue;
                         }
-                    }   
+                    }
                 }
                 try
                 {
