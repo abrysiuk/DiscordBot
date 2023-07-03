@@ -116,14 +116,14 @@ namespace DiscordBot
                 }
 
                 var channel = guild.SystemChannel ?? guild.DefaultChannel;
-                ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(channel);
+                channelPerms = guild.CurrentUser.GetPermissions(channel);
 
                 if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
                 {
-                    if(channel == guild.SystemChannel && guild.SystemChannel != guild.DefaultChannel)
+                    if (channel == guild.SystemChannel && guild.SystemChannel != guild.DefaultChannel)
                     {
                         channel = guild.DefaultChannel;
-                        channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(channel);
+                        channelPerms = guild.CurrentUser.GetPermissions(channel);
 
                         if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
                         {
@@ -220,7 +220,7 @@ namespace DiscordBot
                 var author = (IGuildUser)newMessage.Author;
                 if (reactChannel != null && oldMsg != newMessage.CleanContent)
                 {
-                    ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(reactChannel);
+                    ChannelPermissions channelPerms = (await guild.GetCurrentUserAsync()).GetPermissions(reactChannel);
 
                     if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
                     {

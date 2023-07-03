@@ -30,7 +30,7 @@ namespace DiscordBot
                 var channel = (SocketTextChannel)guild.GetChannel(group.ChannelId);
 
                 await Log(LogSeverity.Verbose, "Commands", $"Processing deletions from {channel.Name}.");
-                ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(channel);
+                ChannelPermissions channelPerms = guild.CurrentUser.GetPermissions(channel);
                 if (!channelPerms.ViewChannel || !channelPerms.ReadMessageHistory)
                 {
                     await Log(LogSeverity.Verbose, "Commands", $"I do not have permission to read {channel.Name}");
@@ -163,7 +163,7 @@ namespace DiscordBot
                 try
                 {
                     await Log(LogSeverity.Verbose, "Commands", $"Processing {channel.Name}.");
-                    ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(channel);
+                    ChannelPermissions channelPerms = guild.CurrentUser.GetPermissions(channel);
                     if (!channelPerms.ViewChannel || !channelPerms.ReadMessageHistory)
                     {
                         await Log(LogSeverity.Verbose, "Commands", $"I do not have permission to read {channel.Name}");
