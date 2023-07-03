@@ -5,8 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DiscordBot
 {
+	/// <summary>
+	/// Main program executable
+	/// </summary>
 	public partial class Program
 	{
+		/// <summary>
+		/// Task fired when all guilds have connected and the app is ready to work.
+		/// </summary>
+		/// <returns></returns>
 		public async Task Ready()
 		{
 			if (_client == null)
@@ -17,7 +24,11 @@ namespace DiscordBot
 			await SetStatus();
 			return;
 		}
-
+		/// <summary>
+		/// Task fired when Members are downloaded from a guild at connection.
+		/// </summary>
+		/// <param name="guild">The SocketGuild passed from the SocketConnection</param>
+		/// <returns></returns>
 		private async Task MembersDownloaded(SocketGuild guild)
 		{
 			List<SocketGuildUser> members;
@@ -48,12 +59,22 @@ namespace DiscordBot
 			return;
 		}
 
+		/// <summary>
+		/// Fired when a new or single user has been downloaded, usually on a change to the member's properties.
+		/// </summary>
+		/// <param name="cacheable">Cached old version of the user, or their ID</param>
+		/// <param name="user">New version of the user.</param>
+		/// <returns></returns>
 		private async Task MemberDownloaded(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser user)
 		{
 			await MemberJoined(user);
 			return;
 		}
-
+		/// <summary>
+		/// Fired when a new user joins a guild.
+		/// </summary>
+		/// <param name="user">SocketGuildUser of the user who joined.</param>
+		/// <returns></returns>
 		private async Task MemberJoined(SocketGuildUser user)
 		{
 			var _db = new AppDBContext();
@@ -69,7 +90,12 @@ namespace DiscordBot
 			_db.SaveChanges();
 			return;
 		}
-
+		/// <summary>
+		/// Heartbeat function
+		/// </summary>
+		/// <param name="a"></param>
+		/// <param name="b"></param>
+		/// <returns></returns>
 		private async Task LatencyUpdated(int a, int b)
 		{
 			var _db = new AppDBContext();
@@ -87,6 +113,11 @@ namespace DiscordBot
 			}
 
 		}
+		/// <summary>
+		/// Fired when a message is received
+		/// </summary>
+		/// <param name="message">IMessage object received.</param>
+		/// <returns></returns>
 		private async Task ReceiveMessage(IMessage message)
 		{
 			if (message is IUserMessage iuMessage && message.Channel is IGuildChannel igChannel)
@@ -102,6 +133,13 @@ namespace DiscordBot
 				_db.SaveChanges();
 			}
 		}
+		/// <summary>
+		/// Fired when an existing message is updated
+		/// </summary>
+		/// <param name="oldMessage">IMessage of the old message if cached, otherwise its ID.</param>
+		/// <param name="newMessage">IMessage representing the new message.</param>
+		/// <param name="channel">The IMessageChannel the message was received on.</param>
+		/// <returns></returns>
 		private async Task UpdateMessage(Cacheable<IMessage, ulong> oldMessage, IMessage newMessage, IMessageChannel channel)
 		{
 			if (newMessage is IUserMessage suMessage && newMessage != null)
@@ -166,6 +204,12 @@ namespace DiscordBot
 				}
 			}
 		}
+		/// <summary>
+		/// Fired when a message is deleted.
+		/// </summary>
+		/// <param name="message">IMessage representing the cached message, or it's Id if not cached.</param>
+		/// <param name="channel">IMessageChannel representing where the message came from, or it's ID if the channel has been deleted too.</param>
+		/// <returns></returns>
 		private async Task DeleteMessage(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
 		{
 			var _db = new AppDBContext();
@@ -237,6 +281,11 @@ namespace DiscordBot
 			await reactChannel.SendMessageAsync(embed: embed.Build());
 			await SetStatus();
 		}
+		/// <summary>
+		/// Fired when Discord sends on a slash command.
+		/// </summary>
+		/// <param name="command">Command received.</param>
+		/// <returns></returns>
 		private async Task SlashCommandHandler(ISlashCommandInteraction command)
 		{
 			switch (command.Data.Name)
@@ -250,11 +299,23 @@ namespace DiscordBot
 					return;
 			}
 		}
+		/// <summary>
+		/// Fired when a loggable event occurs, based on severity.
+		/// </summary>
+		/// <param name="logSeverity">The severity of the log.</param>
+		/// <param name="source">The function that generated the log.</param>
+		/// <param name="message">The message to send</param>
+		/// <returns></returns>
 		private Task Log(LogSeverity logSeverity, string source, string message)
 		{
 			return Log(new LogMessage(logSeverity, source, message));
 		}
-		private Task Log(LogMessage msg)
+        /// <summary>
+        /// Fired when a loggable event occurs, based on severity.
+        /// </summary>
+        /// <param name="msg">The LogMessage received.</param>
+        /// <returns></returns>
+        private Task Log(LogMessage msg)
 		{
 			if (logLevel < (int)msg.Severity) { return Task.CompletedTask; }
 			switch (msg.Severity)

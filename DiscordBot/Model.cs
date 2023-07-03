@@ -7,6 +7,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 namespace DiscordBot
 {
+	/// <summary>
+	/// A single text message in Discord, for storage in the database.
+	/// </summary>
 	public class DiscordMessage
 	{
 		public MessageType Type { get; set; }
@@ -69,6 +72,9 @@ namespace DiscordBot
 		}
 		public virtual ICollection<DiscordLog> DiscordLogs { get; set; } = default!;
 	}
+	/// <summary>
+	/// A logged interaction on Discord, such as an edited message or a triggered reaction.
+	/// </summary>
 	[Table("DiscordLog")]
 	[PrimaryKey(nameof(Type), nameof(MessageId))]
 	public class DiscordLog
@@ -78,6 +84,9 @@ namespace DiscordBot
 		public ulong MessageId { get; set; }
 		public DateTimeOffset? Date { get; set; }
 	}
+	/// <summary>
+	/// A reaction definition to define a regex pattern to apply and emote/emoji to react with.
+	/// </summary>
 	public class ReactionDef
 	{
 		public string Name { get; set; }
@@ -97,6 +106,9 @@ namespace DiscordBot
 			Name = name;
 		}
 	}
+	/// <summary>
+	/// A discord user record, to remember names long forgotten.
+	/// </summary>
 	[PrimaryKey(nameof(Id), nameof(GuildId))]
 	public class DiscordGuildUser
 	{
@@ -132,7 +144,9 @@ namespace DiscordBot
 			};
 		}
 	}
-
+	/// <summary>
+	/// A birthday record
+	/// </summary>
 	[PrimaryKey(nameof(UserId), nameof(GuildId))]
 	public class BirthdayDef
 	{

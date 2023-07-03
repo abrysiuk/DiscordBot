@@ -3,16 +3,58 @@ using Discord.Rest;
 using Discord;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System;
+using Discord.WebSocket;
 
 namespace DiscordBot
 {
 	partial class Program
 	{
-		#region Console Commands
+        #region Console Commands
+        /// <summary>
+        /// Temporary function to delete any messages (and reaction logs) which do not exist on the discord to account for buggy message deletion.
+        /// </summary>
+        /// <param name="since">Date to start cleanup check from. Earlier = slower</param>
+        /// <returns></returns>
+        private async Task DeletedCleanup(DateTime since)
+		{
+			var _db = new AppDBContext();
+
+			var dbMessages = _db.UserMessages.Where(x => x.CreatedAt >= since);
+
+            var groups = dbMessages.GroupBy(x => new { x.ChannelId, x.GuildId }).Select(x=>new {x.Key.ChannelId, x.Key.GuildId, Messages = x.Count() }).ToList();
+
+			foreach (var group in groups)
+			{
+				var guild = _client.GetGuild(group.GuildId);
+				var channel = (SocketTextChannel)guild.GetChannel(group.ChannelId);
+
+                await Log(LogSeverity.Verbose, "Commands", $"Processing deletions from {channel.Name}.");
+                ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(channel);
+                if (!channelPerms.ViewChannel || !channelPerms.ReadMessageHistory)
+                {
+                    await Log(LogSeverity.Verbose, "Commands", $"I do not have permission to read {channel.Name}");
+                    continue;
+                }
+
+                var discordMessages = await channel.GetMessagesAsync(group.Messages).Flatten().Where(x => x is RestUserMessage).ToListAsync();
+				foreach (var dbMessage in dbMessages.Where(x=>x.ChannelId == channel.Id))
+				{
+					if (!discordMessages.Exists(x=> x.Id == dbMessage.Id))
+					{
+						_db.Remove(dbMessage);
+					}
+				}
+            }
+			_db.SaveChanges();
+
+		}
+		/// <summary>
+		/// Registers global slash commands with Discord.
+		/// </summary>
+		/// <returns></returns>
 		private async Task BuildCommands()
 		{
-
-
 			if (_client == null)
 			{
 				await Log(LogSeverity.Error, "Commands", "Command requested while client is not connected.");
@@ -98,6 +140,12 @@ namespace DiscordBot
 			}
 			return;
 		}
+		/// <summary>
+		/// Iterates through a guild's text channels and downloads and processes <c>cnt</c> messages from each guild with ID <c>guildId</c>
+		/// </summary>
+		/// <param name="guildId">ID of the Guild to download the messages from.</param>
+		/// <param name="cnt"># of messages per channel to download. 0 will download everything, null will automatically check for the last message in the DB from each channel and download from there forward.</param>
+		/// <returns></returns>
 		private async Task ProcessGuild(ulong guildId, int? cnt = null)
 		{
 			if (cnt != null && cnt == 0) { cnt = int.MaxValue; }
@@ -172,7 +220,7 @@ namespace DiscordBot
 						{
 							await Log(LogSeverity.Error, "GenHistory", $"{e.Message}");
 						}
-
+						
 					}
 				}
 				catch (Exception e)
@@ -186,6 +234,14 @@ namespace DiscordBot
 
 			return;
 		}
+		/// <summary>
+		/// Manually process a message, edits it or adds it to the DB, and adds reactions.
+		/// </summary>
+		/// <param name="Message">The <c>IUserMessage</c> to process.</param>
+		/// <param name="channel">The <c>IGuildChannel</c> the message came from.</param>
+		/// <param name="_db">An <c>AppDBContext</c> passed from the previous function, to streamline the number of calls to the database.</param>
+		/// <seealso cref="ProcessGuild(ulong, int?)"/>
+		/// <returns></returns>
 		private async Task ProcessMessage(IUserMessage Message, IGuildChannel channel, AppDBContext _db)
 		{
 			if (Message is RestUserMessage suMessage && Message != null)
@@ -214,6 +270,11 @@ namespace DiscordBot
 		}
 		#endregion
 		#region Slash Commands
+		/// <summary>
+		/// Receives a slash command from a text channel and adds a birthday entry to the database.
+		/// </summary>
+		/// <param name="command">Command passed from the Slash Command Handler</param>
+		/// <returns></returns>
 		private static async Task BirthdayCommand(ISlashCommandInteraction command)
 		{
 			if (command.GuildId == null)
@@ -263,8 +324,12 @@ namespace DiscordBot
 
 			await command.RespondAsync("Birthday List Updated!", ephemeral: true);
 		}
-
-		private async Task LeaderboardCommand(ISlashCommandInteraction command)
+        /// <summary>
+        /// Receives a slash command from a text channel and responds with stats from the database.
+        /// </summary>
+        /// <param name="command">Command passed from the Slash Command Handler</param>
+        /// <returns></returns>
+        private async Task LeaderboardCommand(ISlashCommandInteraction command)
 		{
 			const int trunc = 17;
 

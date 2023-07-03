@@ -1,6 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 namespace DiscordBot
 {
+    /// <summary>
+    /// AppDBContext establishes the database connection. Inherits from DbContext
+    /// </summary>
     public class AppDBContext : DbContext
     {
         public DbSet<DiscordMessage> UserMessages { get; set; }

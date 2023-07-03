@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
+using System.Globalization;
 
 namespace DiscordBot
 {
@@ -12,8 +13,18 @@ namespace DiscordBot
 	{
 		public static IConfiguration Configuration => new ConfigurationBuilder().AddUserSecrets<Program>().Build();
 		private DiscordSocketClient _client = default!;
+		/// <summary>
+		/// Initial subroutine fired, immediately passed on to an asynchronous version.
+		/// </summary>
+		/// <param name="args">Command line arguements</param>
+		/// <returns></returns>
 		public static Task Main(string[] args) => new Program().MainAsync(args);
 		private int logLevel;
+		/// <summary>
+		/// Main function which reads command line parameters and configures and starts the connection to discord, then listens for console commands.
+		/// </summary>
+		/// <param name="args">Command line arguments</param>
+		/// <returns></returns>
 		public async Task MainAsync(string[] args)
 		{
 			var logLevels = args.Where(arg => arg.Contains("loglevel")).Where(arg => int.TryParse(arg.Split('=')[1], out int logTry) && logTry < 6).Select(arg => int.Parse(arg.Split('=')[1]));
@@ -77,12 +88,27 @@ namespace DiscordBot
 						Console.WriteLine($"Enter Custom Status:");
 						await _client.SetGameAsync($" {Console.ReadLine()}", type: ActivityType.Playing);
 						break;
+					case "delete":
+						Console.WriteLine($"Enter start date {CultureInfo.CurrentCulture.DateTimeFormat.UniversalSortableDateTimePattern}: ");
+						if (DateTime.TryParse(Console.ReadLine(), CultureInfo.CurrentCulture.DateTimeFormat, out DateTime since))
+						{
+							await DeletedCleanup(since);
+							break;
+						}
+                        await Log(LogSeverity.Error, "User Input", "Malformed date");
+                        break;
 					default:
 						await Log(LogSeverity.Error, "User Input", "Command Unknown");
 						break;
 				}
 			}
 		}
+		/// <summary>
+		/// Search a message for certain text and respond with a reaction if found.
+		/// </summary>
+		/// <param name="msg">Message received to evaluate</param>
+		/// <param name="discordLogs">Collection of DiscordLogs to save the result back to.</param>
+		/// <returns></returns>
 		private async Task React(IUserMessage msg, ICollection<DiscordLog> discordLogs)
 		{
 			var Reactions = new List<ReactionDef>
@@ -130,11 +156,22 @@ namespace DiscordBot
 				}
 			}
 		}
+		/// <summary>
+		/// Get the nickname, username, or deleted notation for a user that may not be in guild anymore.
+		/// </summary>
+		/// <param name="user">IGuildUser to pass on.</param>
+		/// <returns></returns>
 		private string? GetUserName(IGuildUser? user)
 		{
 			return user == null ? null : GetUserName(user.Id, user.GuildId);
 		}
-		private string? GetUserName(ulong id, ulong guildid)
+        /// <summary>
+        /// Get the nickname, username, or deleted notation for a user that may not be in guild anymore.
+        /// </summary>
+        /// <param name="id">User's ID</param>
+        /// <param name="guildid">Guild's ID (nicknames only exist in guilds)</param>
+        /// <returns></returns>
+        private string? GetUserName(ulong id, ulong guildid)
 		{
 			var guild = _client.GetGuild(guildid);
 			var user = guild.Users.FirstOrDefault(x => x.Id == id);
@@ -146,7 +183,10 @@ namespace DiscordBot
 			return member?.Displayname ?? $"Deleted #{id}";
 
 		}
-
+		/// <summary>
+		/// Set the Discord status to Playing Log: #
+		/// </summary>
+		/// <returns></returns>
 		private async Task SetStatus()
 		{
 			var db = new AppDBContext();
