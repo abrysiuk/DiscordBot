@@ -19,7 +19,6 @@ namespace DiscordBot
 		public string CleanContent { get; set; } = default!;
 		public DateTimeOffset Timestamp { get; set; }
 		public DateTimeOffset? EditedTimestamp { get; set; }
-		public DateTimeOffset? Deleted { get; set; }
 		public ulong ChannelId { get; set; }
 		public string ChannelMention { get; set; } = default!;
 		public ulong GuildId { get; set; }
@@ -68,10 +67,11 @@ namespace DiscordBot
 		{
 			return FromIUM(message);
 		}
-		public virtual ICollection<DiscordShame> DiscordShames { get; set; } = default!;
+		public virtual ICollection<DiscordLog> DiscordLogs { get; set; } = default!;
 	}
+	[Table("DiscordLog")]
 	[PrimaryKey(nameof(Type), nameof(MessageId))]
-	public class DiscordShame
+	public class DiscordLog
 	{
 		public string Type { get; set; } = default!;
 		public virtual DiscordMessage Message { get; set; } = default!;

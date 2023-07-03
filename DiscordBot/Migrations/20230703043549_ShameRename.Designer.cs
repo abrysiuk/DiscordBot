@@ -4,6 +4,7 @@ using DiscordBot;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230703043549_ShameRename")]
+    partial class ShameRename
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,7 +46,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("UserId", "GuildId");
 
-                    b.ToTable("BirthdayDefs", (string)null);
+                    b.ToTable("BirthdayDefs");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
@@ -63,25 +66,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id", "GuildId");
 
-                    b.ToTable("GuildUsers", (string)null);
-                });
-
-            modelBuilder.Entity("DiscordBot.DiscordLog", b =>
-                {
-                    b.Property<string>("Type")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("MessageId")
-                        .HasColumnType("decimal(20,0)");
-
-                    b.Property<DateTimeOffset?>("Date")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("Type", "MessageId");
-
-                    b.HasIndex("MessageId");
-
-                    b.ToTable("DiscordLog", (string)null);
+                    b.ToTable("GuildUsers");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>
@@ -112,6 +97,9 @@ namespace DiscordBot.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("Deleted")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset?>("EditedTimestamp")
@@ -152,13 +140,31 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserMessages", (string)null);
+                    b.ToTable("UserMessages");
                 });
 
-            modelBuilder.Entity("DiscordBot.DiscordLog", b =>
+            modelBuilder.Entity("DiscordBot.DiscordShame", b =>
+                {
+                    b.Property<string>("Type")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("MessageId")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<DateTimeOffset?>("Date")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Type", "MessageId");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("DiscordLog");
+                });
+
+            modelBuilder.Entity("DiscordBot.DiscordShame", b =>
                 {
                     b.HasOne("DiscordBot.DiscordMessage", "Message")
-                        .WithMany("DiscordLogs")
+                        .WithMany("DiscordShames")
                         .HasForeignKey("MessageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -168,7 +174,7 @@ namespace DiscordBot.Migrations
 
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>
                 {
-                    b.Navigation("DiscordLogs");
+                    b.Navigation("DiscordShames");
                 });
 #pragma warning restore 612, 618
         }

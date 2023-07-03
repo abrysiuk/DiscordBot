@@ -20,7 +20,7 @@ namespace DiscordBot
 			}
 			var leaderboardCommand = new SlashCommandBuilder();
 			leaderboardCommand.WithName("leaderboard");
-			leaderboardCommand.WithDescription("Display a leaderboard of messages tracked by ShameBot");
+			leaderboardCommand.WithDescription($"Display a leaderboard of messages tracked by {_client.CurrentUser.Username}");
 			leaderboardCommand.AddOption(new SlashCommandOptionBuilder()
 				.WithName("stat")
 				.WithDescription("What stat would you like to report on?")
@@ -190,12 +190,12 @@ namespace DiscordBot
 		{
 			if (Message is RestUserMessage suMessage && Message != null)
 			{
-				DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordShames).FirstOrDefault(s => s.Id == Message.Id);
+				DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordLogs).FirstOrDefault(s => s.Id == Message.Id);
 				if (msg == null)
 				{
 					msg = suMessage;
 					msg.GuildId = channel.Guild.Id;
-					msg.DiscordShames = new List<DiscordShame>();
+					msg.DiscordLogs = new List<DiscordLog>();
 					_db.UserMessages.Add(msg);
 				}
 				else
@@ -203,11 +203,11 @@ namespace DiscordBot
 					_db.Entry(msg).CurrentValues.SetValues((DiscordMessage)suMessage);
 					msg.GuildId = channel.Guild.Id;
 				}
-				await React(suMessage, msg.DiscordShames);
+				await React(suMessage, msg.DiscordLogs);
 
-				if (msg.EditedTimestamp != null && !msg.DiscordShames.Any(x => x.MessageId == msg.Id && x.Type == "Edit"))
+				if (msg.EditedTimestamp != null && !msg.DiscordLogs.Any(x => x.MessageId == msg.Id && x.Type == "Edit"))
 				{
-					msg.DiscordShames.Add(new DiscordShame() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.EditedTimestamp ?? DateTimeOffset.Now });
+					msg.DiscordLogs.Add(new DiscordLog() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.EditedTimestamp ?? DateTimeOffset.Now });
 				}
 
 			}
@@ -318,30 +318,30 @@ namespace DiscordBot
 			{
 				case 1 or 2 or 3:
 				{
-					var shameMessages = _db.DiscordShame
+					var logMessages = _db.DiscordLog
 						.Include(x => x.Message)
 						.Where(x => x.Type == type && (days == null || x.Date >= DateTimeOffset.Now.AddDays(-(double)days)))
 						.Where(x => x.Message.GuildId == command.GuildId)
 						.GroupBy(x => x.Message.AuthorId)
-						.Select(x => new { authorId = x.Key, shames = x.Count() });
+						.Select(x => new { authorId = x.Key, logs = x.Count() });
 
 					var totalMessages = _db.UserMessages
 						.Where(x => x.GuildId == command.GuildId)
 						.GroupBy(x => x.AuthorId)
 						.Select(x => new { authorId = x.Key, total = x.Count() });
 
-					var messages = shameMessages.Join(totalMessages, x => x.authorId, y => y.authorId, (x, y) => new { x.authorId, x.shames, y.total, per = x.shames * 1000.0 / y.total })
+					var messages = logMessages.Join(totalMessages, x => x.authorId, y => y.authorId, (x, y) => new { x.authorId, x.logs, y.total, per = x.logs * 1000.0 / y.total })
 						.Take(30)
 						.ToList()
 						.Select(x => new
 						{
 							x.authorId,
 							name = GetUserName(x.authorId ?? 0, guild.Id),
-							x.shames,
+							x.logs,
 							x.total,
 							x.per
 						})
-						.OrderByDescending(x => normalize ? x.per : x.shames).ToList();
+						.OrderByDescending(x => normalize ? x.per : x.logs).ToList();
 
 					if (!messages.Any())
 					{
@@ -358,7 +358,7 @@ namespace DiscordBot
 
 					foreach (var item in messages)
 					{
-						strBuilder += $"| {item.name?[..(item.name.Length > trunc ? trunc : item.name.Length)].PadRight(len)} | {(normalize ? item.per.ToString("0.00") : item.shames.ToString()),6} |\n";
+						strBuilder += $"| {item.name?[..(item.name.Length > trunc ? trunc : item.name.Length)].PadRight(len)} | {(normalize ? item.per.ToString("0.00") : item.logs.ToString()),6} |\n";
 					}
 
 					strBuilder += $"+{new String('-', len + 2)}+--------+";

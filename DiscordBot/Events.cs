@@ -96,8 +96,8 @@ namespace DiscordBot
 				var _db = new AppDBContext();
 				DiscordMessage msg = (DiscordMessage)(SocketUserMessage)message;
 				msg.GuildId = igChannel.Guild.Id;
-				msg.DiscordShames = new List<DiscordShame>();
-				await React(iuMessage, msg.DiscordShames);
+				msg.DiscordLogs = new List<DiscordLog>();
+				await React(iuMessage, msg.DiscordLogs);
 				_db.UserMessages.Add(msg);
 				_db.SaveChanges();
 			}
@@ -108,7 +108,7 @@ namespace DiscordBot
 			{
 				if ((newMessage.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral) { return; }
 				var _db = new AppDBContext();
-				DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordShames).FirstOrDefault(s => s.Id == newMessage.Id);
+				DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordLogs).FirstOrDefault(s => s.Id == newMessage.Id);
 				string oldMsg = oldMessage.Value?.CleanContent ?? String.Empty;
 				if (msg != null && string.IsNullOrEmpty(oldMsg)) oldMsg = msg.CleanContent;
 
@@ -119,13 +119,13 @@ namespace DiscordBot
 					return;
 				}
 
-				var guild = (IGuildChannel)channel;
+				var guild = ((IGuildChannel)channel).Guild;
 
 				if (msg == null)
 				{
 					msg = (DiscordMessage)suMessage;
 					msg.GuildId = ((IGuildChannel)suMessage.Channel).Guild.Id;
-					msg.DiscordShames = new List<DiscordShame>();
+					msg.DiscordLogs = new List<DiscordLog>();
 					_db.UserMessages.Add(msg);
 				}
 				else
@@ -133,11 +133,11 @@ namespace DiscordBot
 					_db.Entry(msg).CurrentValues.SetValues((DiscordMessage)(SocketUserMessage)suMessage);
 					msg.GuildId = ((IGuildChannel)suMessage.Channel).Guild.Id;
 				}
-				await React(suMessage, msg.DiscordShames);
+				await React(suMessage, msg.DiscordLogs);
 
-				if (!msg.DiscordShames.Any(x => x.MessageId == newMessage.Id && x.Type == "Edit"))
+				if (!msg.DiscordLogs.Any(x => x.MessageId == newMessage.Id && x.Type == "Edit"))
 				{
-					msg.DiscordShames.Add(new DiscordShame() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.EditedTimestamp ?? DateTimeOffset.Now });
+					msg.DiscordLogs.Add(new DiscordLog() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.EditedTimestamp ?? DateTimeOffset.Now });
 				}
 
 				_db.SaveChanges();
@@ -169,18 +169,9 @@ namespace DiscordBot
 		private async Task DeleteMessage(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
 		{
 			var _db = new AppDBContext();
-			DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordShames).FirstOrDefault(s => s.Id == message.Id);
+			DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordLogs).FirstOrDefault(s => s.Id == message.Id);
 			IUserMessage? imsg = (IUserMessage)message.Value;
 			IGuildChannel? ichannel = (IGuildChannel)channel.Value;
-
-			if (msg == null && imsg != null)
-			{
-				msg = (DiscordMessage)imsg;
-				msg.GuildId = ((IGuildChannel)imsg.Channel).Guild.Id;
-				msg.Deleted = DateTimeOffset.Now;
-				msg.DiscordShames = new List<DiscordShame>();
-				_db.UserMessages.Add(msg);
-			}
 
 			if (ichannel == null && imsg != null)
 			{
@@ -193,35 +184,33 @@ namespace DiscordBot
 
 			if (recentLogs.Any(x => x.User.Id != msg?.AuthorId && x.Data is MessageDeleteAuditLogData data && data.ChannelId == channel.Id))
 			{
-				_db.SaveChanges();
 				return;
 			}
 
 			if (msg != null)
 			{
-				if (!msg.DiscordShames.Any(x => x.MessageId == msg.Id && x.Type == "Edit"))
-				{
-					msg.DiscordShames.Add(new DiscordShame() { Message = msg, MessageId = msg.Id, Type = "Edit", Date = msg.Deleted ?? DateTimeOffset.Now });
-				}
+				_db.Remove(msg);
 				_db.SaveChanges();
 			}
 
-			ITextChannel? reactChannel = null;
 			IGuild guild;
-
-			if (ichannel != null || msg?.GuildId != null)
+			if (ichannel?.Guild != null)
 			{
-				guild = ichannel?.Guild ?? _client.GetGuild(msg.GuildId);
-				reactChannel = (await guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame") || x.Name.Contains("the-log"));
+				guild = ichannel.Guild;
+			}
+			else if (msg?.GuildId != null){
+				guild = _client.GetGuild(msg.GuildId);
 			}
 			else
 			{
 				return;
 			}
 
+			ITextChannel? reactChannel = (await guild.GetTextChannelsAsync()).FirstOrDefault(x => x.Name.Contains("shame") || x.Name.Contains("the-log"));
+
 			if (reactChannel == null) { return; }
 
-			ChannelPermissions channelPerms = (await ((IGuild)guild).GetCurrentUserAsync()).GetPermissions(reactChannel);
+			ChannelPermissions channelPerms = (await guild.GetCurrentUserAsync()).GetPermissions(reactChannel);
 
 			if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
 			{

@@ -83,7 +83,7 @@ namespace DiscordBot
 				}
 			}
 		}
-		private async Task React(IUserMessage msg, ICollection<DiscordShame> discordShames)
+		private async Task React(IUserMessage msg, ICollection<DiscordLog> discordLogs)
 		{
 			var Reactions = new List<ReactionDef>
 			{
@@ -93,9 +93,9 @@ namespace DiscordBot
 			foreach (ReactionDef reaction in Reactions)
 			{
 				if (!Regex.IsMatch(msg.Content.ToString(), reaction.Regex, RegexOptions.Multiline | RegexOptions.IgnoreCase)) { continue; }
-				if (!discordShames.Where(x => x.Type == reaction.Name).Any())
+				if (!discordLogs.Where(x => x.Type == reaction.Name).Any())
 				{
-					discordShames.Add(new DiscordShame() { Type = reaction.Name, Date = msg.CreatedAt });
+					discordLogs.Add(new DiscordLog() { Type = reaction.Name, Date = msg.CreatedAt });
 				}
 
 				await SetStatus();
@@ -151,7 +151,7 @@ namespace DiscordBot
 		{
 			var db = new AppDBContext();
 
-			await _client.SetGameAsync($" Shame: {db.DiscordShame.Count()}",type: ActivityType.Playing);
+			await _client.SetGameAsync($" Log: {db.DiscordLog.Count()}",type: ActivityType.Playing);
 		}
 	}
 }
