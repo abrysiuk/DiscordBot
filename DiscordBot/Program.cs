@@ -20,6 +20,7 @@ namespace DiscordBot
 		/// <returns></returns>
 		public static Task Main(string[] args) => new Program().MainAsync(args);
 		private int logLevel;
+		private bool pauseStatus = false;
 		/// <summary>
 		/// Main function which reads command line parameters and configures and starts the connection to discord, then listens for console commands.
 		/// </summary>
@@ -48,6 +49,7 @@ namespace DiscordBot
 			_client.GuildMembersDownloaded += MembersDownloaded;
 			_client.GuildMemberUpdated += MemberDownloaded;
 			_client.UserJoined += MemberJoined;
+			_client.AutocompleteExecuted += AutoCompleteExecuted;
 			_client.Log += Log;
 			_client.Ready += Ready;
 			await _client.LoginAsync(TokenType.Bot, apiKey);
@@ -103,13 +105,14 @@ namespace DiscordBot
 				}
 			}
 		}
-		/// <summary>
-		/// Search a message for certain text and respond with a reaction if found.
-		/// </summary>
-		/// <param name="msg">Message received to evaluate</param>
-		/// <param name="discordLogs">Collection of DiscordLogs to save the result back to.</param>
-		/// <returns></returns>
-		private async Task React(IUserMessage msg, ICollection<DiscordLog> discordLogs)
+
+        /// <summary>
+        /// Search a message for certain text and respond with a reaction if found.
+        /// </summary>
+        /// <param name="msg">Message received to evaluate</param>
+        /// <param name="discordLogs">Collection of DiscordLogs to save the result back to.</param>
+        /// <returns></returns>
+        private async Task React(IUserMessage msg, ICollection<DiscordLog> discordLogs)
 		{
 			var Reactions = new List<ReactionDef>
 			{
@@ -138,7 +141,7 @@ namespace DiscordBot
 
 				if (Emote.TryParse(reaction.Emote, out var emote))
 				{
-					if (msg.Reactions.Any(x => ((Emote)x.Key).Id == emote.Id && x.Value.IsMe))
+					if (msg.Reactions.Any(x => ((Emote)x.Key)?.Id == emote.Id && x.Value.IsMe))
 					{
 						continue;
 					}
@@ -147,7 +150,7 @@ namespace DiscordBot
 				}
 				else if (Emoji.TryParse(reaction.Emote, out var emoji))
 				{
-					if (msg.Reactions.Any(x => ((Emoji)x.Key).Name == emote.Name && x.Value.IsMe))
+					if (msg.Reactions.Any(x => ((Emoji)x.Key)?.Name == emoji.Name && x.Value.IsMe))
 					{
 						continue;
 					}
@@ -189,6 +192,7 @@ namespace DiscordBot
 		/// <returns></returns>
 		private async Task SetStatus()
 		{
+			if (pauseStatus) { return; }
 			var db = new AppDBContext();
 
 			await _client.SetGameAsync($" Log: {db.DiscordLog.Count()}",type: ActivityType.Playing);
