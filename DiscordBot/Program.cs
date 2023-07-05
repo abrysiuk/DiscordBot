@@ -21,12 +21,12 @@ namespace DiscordBot
 		public static Task Main(string[] args) => new Program().MainAsync(args);
 		private int logLevel;
 		private bool pauseStatus = false;
-		/// <summary>
-		/// Main function which reads command line parameters and configures and starts the connection to discord, then listens for console commands.
-		/// </summary>
-		/// <param name="args">Command line arguments</param>
-		/// <returns></returns>
-		public async Task MainAsync(string[] args)
+        /// <summary>
+        /// Main function which reads command line arguments and configures and starts the connection to discord, then listens for console commands.
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        /// <returns></returns>
+        public async Task MainAsync(string[] args)
 		{
 			var logLevels = args.Where(arg => arg.Contains("loglevel")).Where(arg => int.TryParse(arg.Split('=')[1], out int logTry) && logTry < 6).Select(arg => int.Parse(arg.Split('=')[1]));
 			logLevel = logLevels.Any() ? logLevels.First() : 3;
@@ -63,6 +63,9 @@ namespace DiscordBot
 						await _client.StopAsync();
 						await _client.LogoutAsync();
 						return;
+					case "birthday":
+						await BirthdayTestFire();
+						break;
 					case "buildcommands":
 						await BuildCommands();
 						break;

@@ -116,6 +116,7 @@ namespace DiscordBot
                 }
 
                 ChannelPermissions channelPerms;
+                ChannelPermissions userChannelPerms;
 
                 if (user.Id == 221340610953609218)
                 {
@@ -124,14 +125,15 @@ namespace DiscordBot
                     foreach (var achannel in channels)
                     {
                         channelPerms = guild.CurrentUser.GetPermissions(achannel);
+                        userChannelPerms = user.GetPermissions(achannel);
 
-                        if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
+                        if (!channelPerms.ViewChannel || !channelPerms.SendMessages || !userChannelPerms.ViewChannel)
                         {
                             continue;
                         }
                         try
                         {
-                            await achannel.SendMessageAsync($"Happy Birthday {user.Mention}!");
+                            await achannel.SendMessageAsync($"Happy Birthday {user.Mention}! \n https://youtu.be/Sv-OYkGWOhE");
                         }
                         catch (Exception e)
                         {

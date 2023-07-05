@@ -12,6 +12,60 @@ namespace DiscordBot
     {
         #region Console Commands
         /// <summary>
+        /// Test birthday blast function
+        /// </summary>
+        /// <returns></returns>
+        private async Task BirthdayTestFire()
+        {
+            var _db = new AppDBContext();
+            var birthday = _db.BirthdayDefs.Find((ulong)221340610953609218, (ulong)743723470315323402);
+
+            if (birthday == null )
+            {
+                Console.WriteLine("Cannot find the birthday");
+                return;
+            }
+
+            var guild = _client.GetGuild(birthday.GuildId);
+            var user = guild.GetUser(birthday.UserId);
+
+
+            Console.WriteLine($"Guild {guild.Name}; User {user.DisplayName}; Trigger {TimeZoneInfo.ConvertTimeBySystemTimeZoneId(birthday.Date, birthday.TimeZone, TimeZoneInfo.Local.Id)}");
+
+            ChannelPermissions channelPerms;
+            ChannelPermissions userChannelPerms;
+            if (user.Id == 221340610953609218)
+            {
+                var channels = guild.TextChannels;
+
+                foreach (var achannel in channels)
+                {
+                    channelPerms = guild.CurrentUser.GetPermissions(achannel);
+                    userChannelPerms = user.GetPermissions(achannel);
+
+                    Console.Write($"{achannel.Name},{achannel.GetChannelType()},{user.DisplayName},{userChannelPerms.ViewChannel}");
+
+                    if (!channelPerms.ViewChannel || !channelPerms.SendMessages || !userChannelPerms.ViewChannel)
+                    {
+                        Console.WriteLine($",FALSE");
+                        continue;
+                    }
+                    try
+                    {
+                        //await achannel.SendMessageAsync($"Happy Birthday {user.Mention}!");
+                        Console.WriteLine($",TRUE");
+                    }
+                    catch (Exception e)
+                    {
+
+                        await Log(LogSeverity.Error, "Birthday", e.Message);
+                    }
+
+                }
+                return;
+            }
+        }
+        /// <summary>
         /// Temporary function to delete any messages (and reaction logs) which do not exist on the discord to account for buggy message deletion.
         /// </summary>
         /// <param name="since">Date to start cleanup check from. Earlier = slower</param>
