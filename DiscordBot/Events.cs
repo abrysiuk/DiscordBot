@@ -99,7 +99,7 @@ namespace DiscordBot
         private async Task LatencyUpdated(int a, int b)
         {
             var _db = new AppDBContext();
-            var birthdays = _db.BirthdayDefs.ToList().Where(x => x.Date.Date == TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.Today, x.TimeZone).Date);
+            var birthdays = _db.BirthdayDefs.ToList().Where(x => x.Date.Date == TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.Now, x.TimeZone).Date);
             foreach (var birthday in birthdays)
             {
                 var guild = _client.GetGuild(birthday.GuildId);
