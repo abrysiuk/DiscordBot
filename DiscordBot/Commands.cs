@@ -5,12 +5,46 @@ using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using System;
 using Discord.WebSocket;
+using GrammarCheck;
 
 namespace DiscordBot
 {
     partial class Program
     {
         #region Console Commands
+        private async Task GrammarStat(ulong user)
+        {
+            var db = new AppDBContext();
+            var messages = db.UserMessages.Where(m => !(m.AuthorId == user));
+            
+            foreach(var message in messages)
+            {
+                if (message.CleanContent.Trim() == string.Empty)
+                {
+                    continue;
+                }
+
+                var response = await Check.ProcessText(message.CleanContent, "http://homeserve:8081/v2/check");
+                if (response==null || !response.matches.Any())
+                {
+                    continue;
+                }
+
+                foreach(var match in response.matches)
+                {
+                    var dbMatch = new GrammarMatch(message, match);
+                    var rule = db.GrammarRule.Find(dbMatch.Rule?.Id,dbMatch.Rule?.SubId);
+
+                    if (rule != null)
+                    {
+                        dbMatch.Rule = rule;
+                    }
+
+                    db.Add(dbMatch);
+                }
+            }
+            db.SaveChanges();
+        }
         /// <summary>
         /// Test birthday blast function
         /// </summary>
@@ -18,7 +52,7 @@ namespace DiscordBot
         private async Task BirthdayTestFire()
         {
             var _db = new AppDBContext();
-            var birthday = _db.BirthdayDefs.Find((ulong)221340610953609218, (ulong)743723470315323402);
+            var birthday = _db.BirthdayDefs.Find((ulong)221340610953609218, (ulong)743723470315323402); 
 
             if (birthday == null )
             {

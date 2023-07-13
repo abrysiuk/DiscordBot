@@ -4,6 +4,7 @@ using DiscordBot;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230711000635_Abbrv")]
+    partial class Abbrv
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,11 +43,11 @@ namespace DiscordBot.Migrations
 
                     b.Property<string>("Meaning")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Acronyms", (string)null);
+                    b.ToTable("Acronyms");
                 });
 
             modelBuilder.Entity("DiscordBot.BirthdayDef", b =>
@@ -68,7 +71,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("UserId", "GuildId");
 
-                    b.ToTable("BirthdayDefs", (string)null);
+                    b.ToTable("BirthdayDefs");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
@@ -88,7 +91,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id", "GuildId");
 
-                    b.ToTable("GuildUsers", (string)null);
+                    b.ToTable("GuildUsers");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordLog", b =>
@@ -106,7 +109,7 @@ namespace DiscordBot.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("DiscordLog", (string)null);
+                    b.ToTable("DiscordLog");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>
@@ -177,87 +180,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserMessages", (string)null);
-                });
-
-            modelBuilder.Entity("DiscordBot.GrammarMatch", b =>
-                {
-                    b.Property<decimal>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(20,0)");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<decimal>("Id"));
-
-                    b.Property<decimal>("DiscordMessageId")
-                        .HasColumnType("decimal(20,0)");
-
-                    b.Property<int>("Length")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Offset")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Replacements")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RuleId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("RuleSubId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Sentence")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ShortMessage")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DiscordMessageId");
-
-                    b.HasIndex("RuleId", "RuleSubId");
-
-                    b.ToTable("GrammarMatchs", (string)null);
-                });
-
-            modelBuilder.Entity("DiscordBot.GrammarRule", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("SubId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CategoryId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CategoryName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("IssueType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Urls")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id", "SubId");
-
-                    b.ToTable("GrammarRule", (string)null);
+                    b.ToTable("UserMessages");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordLog", b =>
@@ -269,23 +192,6 @@ namespace DiscordBot.Migrations
                         .IsRequired();
 
                     b.Navigation("Message");
-                });
-
-            modelBuilder.Entity("DiscordBot.GrammarMatch", b =>
-                {
-                    b.HasOne("DiscordBot.DiscordMessage", "DiscordMessage")
-                        .WithMany()
-                        .HasForeignKey("DiscordMessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DiscordBot.GrammarRule", "Rule")
-                        .WithMany()
-                        .HasForeignKey("RuleId", "RuleSubId");
-
-                    b.Navigation("DiscordMessage");
-
-                    b.Navigation("Rule");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>

@@ -93,7 +93,11 @@ namespace DiscordBot
 						Console.WriteLine($"Enter Custom Status:");
 						await _client.SetGameAsync($" {Console.ReadLine()}", type: ActivityType.Playing);
 						break;
-					case "delete":
+                    case "grammar":
+                        Console.WriteLine($"Enter UserID:");
+						await GrammarStat(ulong.Parse(Console.ReadLine() ?? "0"));
+                        break;
+                    case "delete":
 						Console.WriteLine($"Enter start date {CultureInfo.CurrentCulture.DateTimeFormat.UniversalSortableDateTimePattern}: ");
 						if (DateTime.TryParse(Console.ReadLine(), CultureInfo.CurrentCulture.DateTimeFormat, out DateTime since))
 						{

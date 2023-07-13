@@ -1,6 +1,8 @@
 ﻿using Discord;
+using Discord.Net;
 using Discord.Rest;
 using Discord.WebSocket;
+using GrammarCheck;
 using Microsoft.EntityFrameworkCore;
 
 namespace DiscordBot
@@ -93,8 +95,8 @@ namespace DiscordBot
         /// <summary>
         /// Heartbeat function
         /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
+        /// <param name="a">Old Latency</param>
+        /// <param name="b">New Latency</param>
         /// <returns></returns>
         private async Task LatencyUpdated(int a, int b)
         {
@@ -196,6 +198,50 @@ namespace DiscordBot
                 await React(iuMessage, msg.DiscordLogs);
                 _db.UserMessages.Add(msg);
                 _db.SaveChanges();
+
+                if(msg.AuthorId != 230527236166385664) { return; }
+                var corrections = await Check.ProcessText(msg.CleanContent);
+               
+                if (corrections != null && corrections.matches.Any())
+                {
+                    foreach (var match in corrections.matches)
+                    {
+                        var embedBuilder = new EmbedBuilder();
+                        embedBuilder
+                            .WithTitle(match.message)
+                            .WithDescription($"{match.context.text.Insert(match.context.offset+match.context.length,"__").Insert(match.context.offset,"__")}")
+                            .WithFooter(new EmbedFooterBuilder() { Text = $"Posted in #{igChannel.Name} on {igChannel.Guild.Name}", IconUrl = igChannel.Guild.IconUrl})
+                            .WithCurrentTimestamp();
+                        var components = new ComponentBuilder();
+
+                        if (!string.IsNullOrEmpty(message.GetJumpUrl()))
+                        {
+                            components.WithButton("Go to message", url: message.GetJumpUrl(), style: ButtonStyle.Link);
+                        }
+
+                        if (match.rule?.urls?.Any() ?? false)
+                        {
+                            components.WithButton("Learn more", url: match.rule?.urls?.FirstOrDefault()?.value ?? "", style: ButtonStyle.Link);
+                        }
+                            
+                        try
+                        {
+                            await message.Author.SendMessageAsync(components:components.Build(), embed: embedBuilder.Build());
+                        }
+                        catch (HttpException e)
+                        {
+                            if (e.DiscordCode == (DiscordErrorCode)50007)
+                            {
+                                await Log(LogSeverity.Info, "Grammar", "Tried to DM but got blocked");
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+                           
+                    }
+                }
             }
         }
         /// <summary>

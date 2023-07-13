@@ -4,6 +4,7 @@ using DiscordBot;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230712002618_Grammar")]
+    partial class Grammar
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -44,7 +47,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Acronyms", (string)null);
+                    b.ToTable("Acronyms");
                 });
 
             modelBuilder.Entity("DiscordBot.BirthdayDef", b =>
@@ -68,7 +71,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("UserId", "GuildId");
 
-                    b.ToTable("BirthdayDefs", (string)null);
+                    b.ToTable("BirthdayDefs");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
@@ -88,7 +91,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id", "GuildId");
 
-                    b.ToTable("GuildUsers", (string)null);
+                    b.ToTable("GuildUsers");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordLog", b =>
@@ -106,7 +109,7 @@ namespace DiscordBot.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("DiscordLog", (string)null);
+                    b.ToTable("DiscordLog");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>
@@ -177,7 +180,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserMessages", (string)null);
+                    b.ToTable("UserMessages");
                 });
 
             modelBuilder.Entity("DiscordBot.GrammarMatch", b =>
@@ -225,7 +228,7 @@ namespace DiscordBot.Migrations
 
                     b.HasIndex("RuleId", "RuleSubId");
 
-                    b.ToTable("GrammarMatchs", (string)null);
+                    b.ToTable("GrammarMatchs");
                 });
 
             modelBuilder.Entity("DiscordBot.GrammarRule", b =>
@@ -257,7 +260,7 @@ namespace DiscordBot.Migrations
 
                     b.HasKey("Id", "SubId");
 
-                    b.ToTable("GrammarRule", (string)null);
+                    b.ToTable("GrammarRule");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordLog", b =>
