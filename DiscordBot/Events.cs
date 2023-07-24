@@ -4,6 +4,8 @@ using Discord.Rest;
 using Discord.WebSocket;
 using GrammarCheck;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
+using UnitsNet;
 
 namespace DiscordBot
 {
@@ -47,7 +49,7 @@ namespace DiscordBot
                 var temp = discordMembers.Find(x => x.Id == member.Id);
                 if (temp != null)
                 {
-                    temp = member;
+                    temp.Update(member);
                 }
                 else
                 {
@@ -87,7 +89,7 @@ namespace DiscordBot
             }
             else
             {
-                member = user;
+                member.Update(user);
             }
             _db.SaveChanges();
             return;
@@ -102,6 +104,7 @@ namespace DiscordBot
         {
             var _db = new AppDBContext();
             var birthdays = _db.BirthdayDefs.ToList().Where(x => x.Date.Date == TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.Now, x.TimeZone).Date);
+
             foreach (var birthday in birthdays)
             {
                 var guild = _client.GetGuild(birthday.GuildId);
@@ -117,48 +120,17 @@ namespace DiscordBot
                     return;
                 }
 
-                ChannelPermissions channelPerms;
-                ChannelPermissions userChannelPerms;
-
-                if (user.Id == 221340610953609218)
-                {
-                    var channels = guild.TextChannels;
-
-                    foreach (var achannel in channels)
-                    {
-                        channelPerms = guild.CurrentUser.GetPermissions(achannel);
-                        userChannelPerms = user.GetPermissions(achannel);
-
-                        if (!channelPerms.ViewChannel || !channelPerms.SendMessages || !userChannelPerms.ViewChannel)
-                        {
-                            continue;
-                        }
-                        try
-                        {
-                            await achannel.SendMessageAsync($"Happy Birthday {user.Mention}! \n https://youtu.be/Sv-OYkGWOhE");
-                        }
-                        catch (Exception e)
-                        {
-
-                            await Log(LogSeverity.Error, "Birthday", e.Message);
-                        }
-                    }
-                    birthday.Date = birthday.Date.AddYears(1);
-                    _db.SaveChanges();
-                    return;
-                }
-
                 var channel = guild.SystemChannel ?? guild.DefaultChannel;
-                channelPerms = guild.CurrentUser.GetPermissions(channel);
+                var channelPerms = guild.CurrentUser.GetPermissions(channel);
 
-                if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
+                if (!channelPerms.SendMessages)
                 {
                     if (channel == guild.SystemChannel && guild.SystemChannel != guild.DefaultChannel)
                     {
                         channel = guild.DefaultChannel;
                         channelPerms = guild.CurrentUser.GetPermissions(channel);
 
-                        if (!channelPerms.ViewChannel || !channelPerms.SendMessages)
+                        if (!channelPerms.SendMessages)
                         {
                             await Log(LogSeverity.Error, "Birthday", $"Can't wish {user.DisplayName} a happy birthday in #{guild.Name}");
                             continue;
@@ -176,10 +148,60 @@ namespace DiscordBot
                 }
 
                 birthday.Date = birthday.Date.AddYears(1);
-                _db.SaveChanges();
+            }
+
+            await Currency.DownloadCurrency(_db);
+
+            _db.SaveChanges();
+
+        }
+        /// <summary>
+        /// Event fired when a reaction is added to a message. Used to request unit conversion.
+        /// </summary>
+        /// <param name="cacheable1">Cached message or its ID</param>
+        /// <param name="cacheable2">Cached channel or its ID</param>
+        /// <param name="reaction">Reaction added</param>
+        /// <returns></returns>
+        private async Task ReactionAdded(Cacheable<IUserMessage, ulong> cacheable1, Cacheable<IMessageChannel, ulong> cacheable2, SocketReaction reaction)
+        {
+            string country;
+
+            switch (reaction.Emote.Name)
+            {
+                case "🇺🇸":
+                    country = "USD";
+                    break;
+                case "🇨🇦":
+                    country = "CAD";
+                    break;
+                default:
+                    return;
+            }
+
+            if (reaction.UserId == _client.CurrentUser.Id) { return; }
+
+            var message = reaction.Message.IsSpecified ? reaction.Message.Value : await cacheable1.GetOrDownloadAsync();
+            if (!(message.Reactions.Any(x=>x.Key.Name == reaction.Emote.Name && x.Value.IsMe))) { return; }
+
+            var db = new AppDBContext();
+            var msg = db.UserMessages.Include(x=>x.QuantityParses).FirstOrDefault(x=>x.Id == cacheable1.Id);
+            if (msg == null || !(msg.QuantityParses.Any())) { return; }
+
+            var igChannel = await cacheable2.GetOrDownloadAsync();
+
+            var channelPerms = ((SocketGuild)((IGuildChannel)igChannel).Guild).CurrentUser.GetPermissions(((IGuildChannel)igChannel));
+
+            if (!channelPerms.SendMessages) { return; }
+
+            var units = await ConvertUnits(msg, country);
+            if (igChannel is ITextChannel itchannel && units.Any())
+            {
+                await itchannel.SendMessageAsync(text: string.Join("\n", units.Select(x => $"> {x.OldString ?? x.OldQuantity?.ToString() ?? "NULL"} = {x.NewString ?? x.NewQuantity?.ToString() ?? "NULL"}")), messageReference: new MessageReference(message.Id), allowedMentions: AllowedMentions.None);
+                await message.RemoveReactionAsync(reaction.Emote, _client.CurrentUser);
             }
 
         }
+
         /// <summary>
         /// Fired when a message is received
         /// </summary>
@@ -187,62 +209,99 @@ namespace DiscordBot
         /// <returns></returns>
         private async Task ReceiveMessage(IMessage message)
         {
-            if (message is IUserMessage iuMessage && message.Channel is IGuildChannel igChannel)
+            await Task.Run(async () =>
             {
 
-                if ((message.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral) { return; }
-                var _db = new AppDBContext();
-                DiscordMessage msg = (DiscordMessage)(SocketUserMessage)message;
-                msg.GuildId = igChannel.Guild.Id;
-                msg.DiscordLogs = new List<DiscordLog>();
-                await React(iuMessage, msg.DiscordLogs);
-                _db.UserMessages.Add(msg);
-                _db.SaveChanges();
-
-                if(msg.AuthorId != 230527236166385664) { return; }
-                var corrections = await Check.ProcessText(msg.CleanContent);
-               
-                if (corrections != null && corrections.matches.Any())
+                if (message is IUserMessage iuMessage && message.Channel is IGuildChannel igChannel)
                 {
-                    foreach (var match in corrections.matches)
+
+                    if ((message.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral || message.Author.IsBot || _client.CurrentUser.Id == message.Author.Id) { return; }
+                    var _db = new AppDBContext();
+                    DiscordMessage msg = (DiscordMessage)(SocketUserMessage)message;
+                    msg.GuildId = igChannel.Guild.Id;
+                    msg.DiscordLogs = new List<DiscordLog>();
+                    await React(iuMessage, msg.DiscordLogs);
+                    _db.UserMessages.Add(msg);
+
+                    try
                     {
-                        var embedBuilder = new EmbedBuilder();
-                        embedBuilder
-                            .WithTitle(match.message)
-                            .WithDescription($"{match.context.text.Insert(match.context.offset+match.context.length,"__").Insert(match.context.offset,"__")}")
-                            .WithFooter(new EmbedFooterBuilder() { Text = $"Posted in #{igChannel.Name} on {igChannel.Guild.Name}", IconUrl = igChannel.Guild.IconUrl})
-                            .WithCurrentTimestamp();
-                        var components = new ComponentBuilder();
+                        await QuantulumParse(msg);
 
-                        if (!string.IsNullOrEmpty(message.GetJumpUrl()))
+                        if (msg.QuantityParses.Any())
                         {
-                            components.WithButton("Go to message", url: message.GetJumpUrl(), style: ButtonStyle.Link);
-                        }
-
-                        if (match.rule?.urls?.Any() ?? false)
-                        {
-                            components.WithButton("Learn more", url: match.rule?.urls?.FirstOrDefault()?.value ?? "", style: ButtonStyle.Link);
-                        }
-                            
-                        try
-                        {
-                            await message.Author.SendMessageAsync(components:components.Build(), embed: embedBuilder.Build());
-                        }
-                        catch (HttpException e)
-                        {
-                            if (e.DiscordCode == (DiscordErrorCode)50007)
+                            var emotes = new List<Emoji>();
+                            if (msg.QuantityParses.Any(x => x.CurrencyCode != "CAD"))
                             {
-                                await Log(LogSeverity.Info, "Grammar", "Tried to DM but got blocked");
+                                emotes.Add(new Emoji("🇨🇦"));
                             }
-                            else
+                            if (msg.QuantityParses.Any(x => x.CurrencyCode != "USD"))
                             {
-                                throw;
+                                emotes.Add(new Emoji("🇺🇸"));
+                            }
+                            var channelPerms = ((SocketGuild)igChannel.Guild).CurrentUser.GetPermissions(igChannel);
+
+                            if (channelPerms.AddReactions)
+                            {
+                                foreach (var emote in emotes)
+                                {
+                                    await iuMessage.AddReactionAsync(emote);
+                                }
                             }
                         }
-                           
+                    }
+                    catch (Exception e)
+                    {
+
+                        await Log(LogSeverity.Warning, "Python", e.ToString());
+                    }
+
+                    _db.SaveChanges();
+
+                    if (!_db.GuildUsers.Find(msg.AuthorId, msg.GuildId)?.TrackGrammar ?? true) { return; }
+                    var corrections = await Check.ProcessText(msg.CleanContent);
+
+                    if (corrections != null && corrections.matches.Any())
+                    {
+                        foreach (var match in corrections.matches)
+                        {
+                            var embedBuilder = new EmbedBuilder();
+                            embedBuilder
+                                .WithTitle(match.message)
+                                .WithDescription($"{match.context.text.Insert(match.context.offset + match.context.length, "__").Insert(match.context.offset, "__")}")
+                                .WithFooter(new EmbedFooterBuilder() { Text = $"Posted in #{igChannel.Name} on {igChannel.Guild.Name}", IconUrl = igChannel.Guild.IconUrl })
+                                .WithCurrentTimestamp();
+                            var components = new ComponentBuilder();
+
+                            if (!string.IsNullOrEmpty(message.GetJumpUrl()))
+                            {
+                                components.WithButton("Go to message", url: message.GetJumpUrl(), style: ButtonStyle.Link);
+                            }
+
+                            if (match.rule?.urls?.Any() ?? false)
+                            {
+                                components.WithButton("Learn more", url: match.rule?.urls?.FirstOrDefault()?.value ?? "", style: ButtonStyle.Link);
+                            }
+
+                            try
+                            {
+                                await message.Author.SendMessageAsync(components: components.Build(), embed: embedBuilder.Build());
+                            }
+                            catch (HttpException e)
+                            {
+                                if (e.DiscordCode == (DiscordErrorCode)50007)
+                                {
+                                    await Log(LogSeverity.Info, "Grammar", "Tried to DM but got blocked");
+                                }
+                                else
+                                {
+                                    throw;
+                                }
+                            }
+
+                        }
                     }
                 }
-            }
+            });
         }
         /// <summary>
         /// Fired when an existing message is updated
@@ -255,7 +314,7 @@ namespace DiscordBot
         {
             if (newMessage is IUserMessage suMessage && newMessage != null)
             {
-                if ((newMessage.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral) { return; }
+                if ((newMessage.Flags & MessageFlags.Ephemeral) == MessageFlags.Ephemeral || newMessage.Author.IsBot || _client.CurrentUser.Id == newMessage.Author.Id) { return; }
                 var _db = new AppDBContext();
                 DiscordMessage? msg = _db.UserMessages.Include(x => x.DiscordLogs).FirstOrDefault(s => s.Id == newMessage.Id);
                 string oldMsg = oldMessage.Value?.CleanContent ?? String.Empty;
@@ -337,7 +396,7 @@ namespace DiscordBot
 
             var recentLogs = await ichannel.Guild.GetAuditLogsAsync(1);
 
-            if (recentLogs.Any(x => x.User.Id != msg?.AuthorId && x.Data is MessageDeleteAuditLogData data && data.ChannelId == channel.Id))
+            if (recentLogs.Any(x => x.User.Id != msg?.AuthorId && x.Data is MessageDeleteAuditLogData data && data.Target.Id == msg?.AuthorId && data.ChannelId == channel.Id))
             {
                 return;
             }
@@ -400,23 +459,47 @@ namespace DiscordBot
         /// <returns></returns>
         private async Task AutoCompleteExecuted(SocketAutocompleteInteraction interaction)
         {
-            await Log(LogSeverity.Debug, "AutoComplete", "Autocomplete fired");
-            if (interaction.Data.CommandName != "birthday") { return; }
-            var focusedOption = interaction.Data.Options.First(x => x.Focused);
+            var focusedOption = interaction.Data.Options.FirstOrDefault(x => x.Focused);
             if (focusedOption == null) { return; }
-
-            await Log(LogSeverity.Debug, "Auto", $"{interaction.Data.CommandName}: {focusedOption.Value}");
-
+            var foValue = focusedOption.Value.ToString()?.ToLower() ?? "";
             List<AutocompleteResult> results = new();
-            if (focusedOption.Name == "timezone")
+            switch (interaction.Data.CommandName)
             {
-                foreach (TimeZoneInfo z in TimeZoneInfo.GetSystemTimeZones().Where(x => x.DisplayName.Contains(focusedOption.Value.ToString() ?? "") || x.Id.Contains(focusedOption.Value.ToString() ?? "")).Take(25))
-                {
-                    results.Add(new AutocompleteResult($"{z.DisplayName} {(z.SupportsDaylightSavingTime ? "(DST)" : "(No DST)")}", z.Id));
-                    await Log(LogSeverity.Debug, "Auto", $"{z.DisplayName}");
-                }
-                await interaction.RespondAsync(results);
+                case "birthday":
+                    if (focusedOption.Name == "timezone")
+                    {
+                        foreach (TimeZoneInfo z in TimeZoneInfo.GetSystemTimeZones().Where(x => x.DisplayName.ToLower().Contains(foValue) || x.Id.ToLower().Contains(foValue)).OrderBy(q => q.BaseUtcOffset))
+                        {
+                            results.Add(new AutocompleteResult($"{z.DisplayName} {(z.SupportsDaylightSavingTime ? "(DST)" : "(No DST)")}", z.Id));
+                            await Log(LogSeverity.Debug, "Auto", $"{z.DisplayName}");
+                        }
+                    }
+                    break;
+
+                case "convert":
+                    switch (focusedOption.Name)
+                    {
+                        case "unit-type":
+                            results = Quantity.Infos.Where(q => q.Name.ToLower().Contains(foValue)).Select(q => new AutocompleteResult(Regex.Replace(q.Name, @"\B([A-Z])", " $1"), q.Name)).ToList();
+                            results.Add(new AutocompleteResult("Currency", "Currency"));
+                            results = results.OrderBy(q => q.Name).ToList();
+                            break;
+                        case "from-unit":
+                        case "to-unit":
+                            if ((interaction.Data.Options.FirstOrDefault(x => x.Name == "unit-type")?.Value.ToString() ?? "") == "Currency")
+                            {
+                                var db = new AppDBContext();
+                                results = db.Currencies.Where(q => q.Name.ToLower().Contains(foValue) || q.CurrencyCode.ToLower().Contains(foValue)).ToList().Select(q => new AutocompleteResult(q.Name, q.CurrencyCode)).OrderBy(q => q.Name).ToList();
+                                break;
+                            }
+                            var quant = Quantity.Infos.FirstOrDefault(q => q.Name == (interaction.Data.Options.FirstOrDefault(x => x.Name == "unit-type")?.Value.ToString() ?? ""));
+                            if (quant == null) { break; }
+                            results = quant.UnitInfos.Where(q => q.Name.ToLower().Contains(focusedOption.Value.ToString()?.ToLower() ?? "")).Select(q => new AutocompleteResult(Regex.Replace(q.Name, @"\B([A-Z])", " $1"), q.Name)).ToList();
+                            break;
+                    }
+                    break;
             }
+            await interaction.RespondAsync(results.Take(25));
         }
         /// <summary>
         /// Fired when Discord sends on a slash command.
@@ -434,6 +517,13 @@ namespace DiscordBot
                 case "birthday":
                     await BirthdayCommand(command);
                     return;
+
+                case "grammar":
+                    await GrammarToggle(command);
+                    return;
+                case "convert":
+                    await Convert(command);
+                    return;
             }
         }
         /// <summary>
@@ -443,7 +533,7 @@ namespace DiscordBot
         /// <param name="source">The function that generated the log.</param>
         /// <param name="message">The message to send</param>
         /// <returns></returns>
-        private Task Log(LogSeverity logSeverity, string source, string message)
+        public static Task Log(LogSeverity logSeverity, string source, string message)
         {
             return Log(new LogMessage(logSeverity, source, message));
         }
@@ -452,7 +542,7 @@ namespace DiscordBot
         /// </summary>
         /// <param name="msg">The LogMessage received.</param>
         /// <returns></returns>
-        private Task Log(LogMessage msg)
+        public static Task Log(LogMessage msg)
         {
             if (logLevel < (int)msg.Severity) { return Task.CompletedTask; }
             switch (msg.Severity)

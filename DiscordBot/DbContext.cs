@@ -16,6 +16,8 @@ namespace DiscordBot
         public DbSet<Acronym> Acronyms { get; set; }
         public DbSet<GrammarMatch> GrammarMatchs { get; set; }
         public DbSet<GrammarRule> GrammarRule { get; set; }
+        public DbSet<Currency> Currencies { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder
@@ -25,14 +27,14 @@ namespace DiscordBot
         {
             modelBuilder.Entity<GrammarMatch>().Property(e => e.Replacements)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                v => JsonSerializer.Deserialize<string?[]>(v, (JsonSerializerOptions)null));
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<string?[]>(v, (JsonSerializerOptions)null!)!);
             modelBuilder.Entity<GrammarRule>().Property(e => e.Urls)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                v => JsonSerializer.Deserialize<string?[]>(v, (JsonSerializerOptions)null));
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<string?[]>(v, (JsonSerializerOptions)null!)!);
 
-            var valueComparer = new ValueComparer<string[]>((x,y) => x.SequenceEqual(y), c=> c.Aggregate(0, (a,v) => HashCode.Combine(a, v.GetHashCode())),
+            var valueComparer = new ValueComparer<string[]>((x,y) => x!.SequenceEqual(y!), c=> c.Aggregate(0, (a,v) => HashCode.Combine(a, v.GetHashCode())),
                 c  => c.ToArray());
 
             modelBuilder.Entity<GrammarMatch>().Property(e => e.Replacements).Metadata.SetValueComparer(valueComparer);

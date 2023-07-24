@@ -4,6 +4,7 @@ using DiscordBot;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230714012739_GrammarOption")]
+    partial class GrammarOption
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -71,29 +74,6 @@ namespace DiscordBot.Migrations
                     b.ToTable("BirthdayDefs");
                 });
 
-            modelBuilder.Entity("DiscordBot.Currency", b =>
-                {
-                    b.Property<string>("CurrencyCode")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("LCID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float>("Rate")
-                        .HasColumnType("real");
-
-                    b.Property<DateTime>("Updated")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("CurrencyCode");
-
-                    b.ToTable("Currencies");
-                });
-
             modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
                 {
                     b.Property<decimal>("Id")
@@ -101,9 +81,6 @@ namespace DiscordBot.Migrations
 
                     b.Property<decimal>("GuildId")
                         .HasColumnType("decimal(20,0)");
-
-                    b.Property<string>("CurrencyCode")
-                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Nickname")
                         .HasColumnType("nvarchar(max)");
@@ -116,8 +93,6 @@ namespace DiscordBot.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id", "GuildId");
-
-                    b.HasIndex("CurrencyCode");
 
                     b.ToTable("GuildUsers");
                 });
@@ -291,54 +266,6 @@ namespace DiscordBot.Migrations
                     b.ToTable("GrammarRule");
                 });
 
-            modelBuilder.Entity("DiscordBot.QuantityParse", b =>
-                {
-                    b.Property<decimal>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(20,0)");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<decimal>("Id"));
-
-                    b.Property<string>("CurrencyCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("EndPos")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Entity")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("MessageId")
-                        .HasColumnType("decimal(20,0)");
-
-                    b.Property<int>("StartPos")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float>("Value")
-                        .HasColumnType("real");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MessageId");
-
-                    b.ToTable("QuantityParse");
-                });
-
-            modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
-                {
-                    b.HasOne("DiscordBot.Currency", "Currency")
-                        .WithMany()
-                        .HasForeignKey("CurrencyCode");
-
-                    b.Navigation("Currency");
-                });
-
             modelBuilder.Entity("DiscordBot.DiscordLog", b =>
                 {
                     b.HasOne("DiscordBot.DiscordMessage", "Message")
@@ -367,20 +294,9 @@ namespace DiscordBot.Migrations
                     b.Navigation("Rule");
                 });
 
-            modelBuilder.Entity("DiscordBot.QuantityParse", b =>
-                {
-                    b.HasOne("DiscordBot.DiscordMessage", "Message")
-                        .WithMany("QuantityParses")
-                        .HasForeignKey("MessageId");
-
-                    b.Navigation("Message");
-                });
-
             modelBuilder.Entity("DiscordBot.DiscordMessage", b =>
                 {
                     b.Navigation("DiscordLogs");
-
-                    b.Navigation("QuantityParses");
                 });
 #pragma warning restore 612, 618
         }

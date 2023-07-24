@@ -1,0 +1,63 @@
+{
+  "dimensionless": {
+    "dimensions": [],
+    "URI": "Dimensionless_quantity"
+  },
+  "length": {
+    "dimensions": [],
+    "URI": "Length"
+  },
+  "mass": {
+    "dimensions": [],
+    "URI": "Mass"
+  },
+  "currency": {
+    "dimensions": [],
+    "URI": "Currency"
+  },
+  "temperature": {
+    "dimensions": [],
+    "URI": "Temperature"
+  },
+  "area": {
+    "dimensions": [
+      {
+        "base": "length",
+        "power": 2
+      }
+    ],
+    "URI": "Area"
+  },
+  "volume": {
+    "dimensions": [
+      {
+        "base": "length",
+        "power": 3
+      }
+    ],
+    "URI": "Volume"
+  },
+  "volume (lumber)": {
+    "dimensions": [
+      {
+        "base": "length",
+        "power": 3
+      }
+    ],
+    "URI": "Lumber"
+  },
+  "speed": {
+    "dimensions": [
+    ],
+    "URI": "Speed"
+  },
+  "pressure": {
+    "dimensions": [
+    ],
+    "URI": "Pressure"
+  },
+  "acceleration": {
+    "dimensions": [],
+    "URI": "Acceleration"
+  }
+}

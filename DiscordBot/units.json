@@ -1,0 +1,1331 @@
+{
+  "dimensionless": {
+    "surfaces": [
+      "dimensionless"
+    ],
+    "entity": "dimensionless",
+    "URI": "Dimensionless_quantity",
+    "dimensions": [],
+    "symbols": []
+  },
+  "meter": {
+    "surfaces": [
+      "metre",
+      "meter"
+    ],
+    "entity": "length",
+    "URI": "Metre",
+    "dimensions": [],
+    "symbols": [
+      "m"
+    ],
+    "currency_code": "CAD",
+    "prefixes": [
+      "E",
+      "P",
+      "T",
+      "G",
+      "M",
+      "k",
+      "m",
+      "n",
+      "p",
+      "f",
+      "a",
+      "z",
+      "y"
+    ]
+  },
+  "hectometer": {
+    "surfaces": [
+      "hectometre",
+      "hectometer"
+    ],
+    "entity": "length",
+    "URI": "Hectometre",
+    "dimensions": [],
+    "symbols": [
+      "hm"
+    ],
+    "currency_code": "CAD"
+  },
+  "decameter": {
+    "surfaces": [
+      "decametre",
+      "decameter",
+      "dekametre",
+      "dekameter"
+    ],
+    "entity": "length",
+    "URI": "Decametre",
+    "dimensions": [],
+    "symbols": [
+      "dam",
+      "Dm",
+      "dkm"
+    ],
+    "currency_code": "CAD"
+  },
+  "decimeter": {
+    "surfaces": [
+      "decimetre",
+      "decimeter"
+    ],
+    "entity": "length",
+    "URI": "Decimetre",
+    "dimensions": [],
+    "symbols": [
+      "dm"
+    ],
+    "currency_code": "CAD"
+  },
+  "centimeter": {
+    "surfaces": [
+      "centimetre",
+      "centimeter"
+    ],
+    "entity": "length",
+    "URI": "Centimetre",
+    "dimensions": [],
+    "symbols": [
+      "cm"
+    ],
+    "currency_code": "CAD"
+  },
+  "micrometer": {
+    "surfaces": [
+      "micrometre",
+      "micrometer",
+      "micron"
+    ],
+    "entity": "length",
+    "URI": "Micrometre",
+    "dimensions": [],
+    "symbols": [
+      "\u00b5m"
+    ],
+    "currency_code": "CAD"
+  },
+  "light year": {
+    "surfaces": [
+      "light-year",
+      "light year"
+    ],
+    "entity": "length",
+    "URI": "Light-year",
+    "dimensions": [],
+    "symbols": [
+      "ly"
+    ],
+    "currency_code": "CAD"
+  },
+  "astronomical unit": {
+    "surfaces": [
+      "astronomical unit"
+    ],
+    "entity": "length",
+    "URI": "Astronomical_unit",
+    "dimensions": [],
+    "symbols": [
+      "au",
+      "AU",
+      "ua",
+      "UA"
+    ],
+    "currency_code": "CAD"
+  },
+  "mile": {
+    "surfaces": [
+      "mile",
+      "statute mile"
+    ],
+    "entity": "length",
+    "URI": "Mile",
+    "dimensions": [],
+    "symbols": [
+      "mi"
+    ],
+    "currency_code": "USD"
+  },
+  "fathom": {
+    "surfaces": [
+      "fathom"
+    ],
+    "entity": "length",
+    "URI": "Fathom",
+    "dimensions": [],
+    "symbols": [
+      "fath"
+    ],
+    "currency_code": "OLD"
+  },
+  "yard": {
+    "surfaces": [
+      "yard"
+    ],
+    "entity": "length",
+    "URI": "Yard",
+    "dimensions": [],
+    "symbols": [
+      "yd"
+    ],
+    "currency_code": "USD"
+  },
+  "foot": {
+    "surfaces": [
+      "foot"
+    ],
+    "entity": "length",
+    "URI": "Foot_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "ft",
+      "'",
+      "\u2032"
+    ],
+    "currency_code": "USD"
+  },
+  "inch": {
+    "surfaces": [
+      "inch"
+    ],
+    "entity": "length",
+    "URI": "Inch",
+    "dimensions": [],
+    "symbols": [
+      "in",
+      "\"",
+      "\u2033",
+      "\u201d"
+    ],
+    "currency_code": "USD"
+  },
+  "angstrom": {
+    "surfaces": [
+      "Angstrom",
+      "\u00e5ngstr\u00f6m",
+      "\u00e5ngstrom",
+      "angstr\u00f6m",
+      "angstrom"
+    ],
+    "entity": "length",
+    "URI": "\u00c5ngstr\u00f6m",
+    "dimensions": [],
+    "symbols": [
+      "\u00c5"
+    ],
+    "currency_code": "CAD"
+  },
+  "short ton": {
+    "surfaces": [
+      "short ton",
+      "ton"
+    ],
+    "entity": "mass",
+    "URI": "Short_ton",
+    "dimensions": [],
+    "symbols": [],
+    "currency_code": "USD"
+  },
+  "long ton": {
+    "surfaces": [
+      "long ton",
+      "imperial ton",
+      "weight ton"
+    ],
+    "entity": "mass",
+    "URI": "Long_ton",
+    "dimensions": [],
+    "symbols": [],
+    "currency_code": "GBR"
+  },
+  "kilogram": {
+    "surfaces": [
+      "kilogram",
+      "kilogramme",
+      "kilo",
+      "kg",
+      "kgs"
+    ],
+    "entity": "mass",
+    "URI": "Kilogram",
+    "dimensions": [],
+    "symbols": [
+      "kg"
+    ],
+    "currency_code": "CAD"
+  },
+  "gram": {
+    "surfaces": [
+      "gram",
+      "gramme"
+    ],
+    "entity": "mass",
+    "URI": "Gram",
+    "dimensions": [],
+    "symbols": [
+      "g",
+      "gm"
+    ],
+    "currency_code": "CAD"
+  },
+  "milligram": {
+    "surfaces": [
+      "milligram",
+      "milligramme"
+    ],
+    "entity": "mass",
+    "URI": "Gram",
+    "dimensions": [],
+    "symbols": [
+      "mg"
+    ],
+    "currency_code": "CAD"
+  },
+  "microgram": {
+    "surfaces": [
+      "microgram",
+      "microgramme"
+    ],
+    "entity": "mass",
+    "URI": "Microgram",
+    "dimensions": [],
+    "symbols": [
+      "\u00b5g",
+      "mcg"
+    ],
+    "currency_code": "CAD"
+  },
+  "pound": {
+    "surfaces": [
+      "pound",
+      "pound-mass"
+    ],
+    "entity": "mass",
+    "URI": "Pound_(mass)",
+    "dimensions": [],
+    "symbols": [
+      "lb",
+      "lbm",
+      "lbs"
+    ],
+    "currency_code": "USD"
+  },
+  "ounce": {
+    "surfaces": [
+      "ounce"
+    ],
+    "entity": "mass",
+    "URI": "Ounce",
+    "dimensions": [],
+    "symbols": [
+      "oz",
+      "\u2125"
+    ],
+    "currency_code": "USD"
+  },
+  "tonne": {
+    "surfaces": [
+      "tonne",
+      "metric ton"
+    ],
+    "entity": "mass",
+    "URI": "Tonne",
+    "dimensions": [],
+    "symbols": [
+      "t"
+    ],
+    "currency_code": "CAD"
+  },
+  "dollar": {
+    "surfaces": [
+      "dollar"
+    ],
+    "entity": "currency",
+    "URI": "Dollar",
+    "dimensions": [],
+    "symbols": [
+      "$"
+    ],
+    "currency_code": "NAN",
+    "comment": "Treat as generic dollar for expanding purposes"
+  },
+  "united states dollar": {
+    "surfaces": [
+      "united states dollar",
+      "us dollar",
+      "american dollar"
+    ],
+    "entity": "currency",
+    "URI": "United_States_dollar",
+    "dimensions": [],
+    "symbols": [
+      "USD",
+      "US$"
+    ],
+    "currency_code": "USD"
+  },
+  "canadian dollar": {
+    "surfaces": [
+      "canadian dollar",
+      "ca dollar",
+      "cad dollar"
+    ],
+    "entity": "currency",
+    "URI": "Canadian_dollar",
+    "dimensions": [],
+    "symbols": [
+      "CAD",
+      "$CAD",
+      "CAD$",
+      "$CA",
+      "CA$"
+    ],
+    "currency_code": "CAD"
+  },
+  "euro": {
+    "surfaces": [
+      "euro"
+    ],
+    "entity": "currency",
+    "URI": "Euro",
+    "dimensions": [],
+    "symbols": [
+      "\u20ac",
+      "EUR"
+    ],
+    "currency_code": "EUR"
+  },
+  "pound sterling": {
+    "surfaces": [
+      "pound sterling",
+      "pound"
+    ],
+    "entity": "currency",
+    "URI": "Pound_sterling",
+    "dimensions": [],
+    "symbols": [
+      "\u00a3",
+      "GBP"
+    ],
+    "currency_code": "GBP"
+  },
+  "australian dollar": {
+    "surfaces": [
+      "australian dollar"
+    ],
+    "entity": "currency",
+    "URI": "Australian_dollar",
+    "dimensions": [],
+    "symbols": [
+      "AUD",
+      "A$"
+    ],
+    "currency_code": "AUD"
+  },
+  "new zealand dollar": {
+    "surfaces": [
+      "new zealand dollar"
+    ],
+    "entity": "currency",
+    "URI": "New_Zealand_dollar",
+    "dimensions": [],
+    "symbols": [
+      "NZD",
+      "NZ$"
+    ],
+    "currency_code": "NZD"
+  },
+  "japanese yen": {
+    "surfaces": [
+      "japanese yen",
+      "yen"
+    ],
+    "entity": "currency",
+    "URI": "Japanese_yen",
+    "dimensions": [],
+    "symbols": [
+      "\u5186",
+      "\u5713",
+      "\u00a5",
+      "￥",
+      "JPY"
+    ],
+    "currency_code": "JPY"
+  },
+  "swiss franc": {
+    "surfaces": [
+      "swiss franc",
+      "franc"
+    ],
+    "entity": "currency",
+    "URI": "Swiss_franc",
+    "dimensions": [],
+    "symbols": [
+      "Fr",
+      "SFr",
+      "FS",
+      "CHF"
+    ],
+    "currency_code": "CHF"
+  },
+  "rappen": {
+    "surfaces": [
+      "rappen"
+    ],
+    "entity": "currency",
+    "URI": "Rappen",
+    "dimensions": [],
+    "symbols": []
+  },
+  "south african rand": {
+    "surfaces": [
+      "south african rand",
+      "rand"
+    ],
+    "entity": "currency",
+    "URI": "South_African_rand",
+    "dimensions": [],
+    "symbols": [
+      "R",
+      "ZAR"
+    ],
+    "currency_code": "ZAR"
+  },
+  "brazilian real": {
+    "surfaces": [
+      "brazilian real",
+      "real",
+      "reais"
+    ],
+    "entity": "currency",
+    "URI": "South_African_rand",
+    "dimensions": [],
+    "symbols": [
+      "R$",
+      "BRL"
+    ],
+    "currency_code": "BRL"
+  },
+  "indian rupee": {
+    "surfaces": [
+      "indian rupee",
+      "rupee"
+    ],
+    "entity": "currency",
+    "URI": "Indian_rupee",
+    "dimensions": [],
+    "symbols": [
+      "\u20b9",
+      "INR"
+    ],
+    "currency_code": "INR"
+  },
+  "mexican peso": {
+    "surfaces": [
+      "mexican peso",
+      "peso"
+    ],
+    "entity": "currency",
+    "URI": "Mexican_peso",
+    "dimensions": [],
+    "symbols": [
+      "MXN"
+    ],
+    "currency_code": "MXN"
+  },
+  "russian ruble": {
+    "surfaces": [
+      "russian ruble",
+      "russian rouble",
+      "ruble",
+      "rouble"
+    ],
+    "entity": "currency",
+    "URI": "Russian_ruble",
+    "dimensions": [],
+    "symbols": [
+      "\u20bd",
+      "RUB"
+    ],
+    "currency_code": "RUB"
+  },
+  "chinese yuan": {
+    "surfaces": [
+      "chinese yuan",
+      "yuan"
+    ],
+    "entity": "currency",
+    "URI": "Chinese_yuan",
+    "dimensions": [],
+    "symbols": [
+      "\u00a5",
+      "\u5143",
+      "¥",
+      "CNY"
+    ],
+    "currency_code": "CNY"
+  },
+  "south korean won": {
+    "surfaces": [
+      "south korean won",
+      "won",
+      "korean republic won"
+    ],
+    "entity": "currency",
+    "URI": "South_Korean_won",
+    "dimensions": [],
+    "symbols": [
+      "\uc6d0",
+      "\u20a9",
+      "KRW"
+    ],
+    "currency_code": "KRW"
+  },
+  "cubic meter": {
+    "surfaces": [
+      "cubic metre",
+      "cubic meter",
+      "kiloliter",
+      "kilolitre"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_metre",
+    "dimensions": [
+      {
+        "base": "meter",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "cu m",
+      "kL"
+    ],
+    "currency_code": "CAD"
+  },
+  "cubic kilometer": {
+    "surfaces": [
+      "cubic kilometre",
+      "cubic kilometer"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_metre",
+    "dimensions": [
+      {
+        "base": "kilometer",
+        "power": 3
+      }
+    ],
+    "symbols": [],
+    "currency_code": "CAD"
+  },
+  "milliliter": {
+    "surfaces": [
+      "cubic centimetre",
+      "cubic centimeter",
+      "millilitre",
+      "milliliter"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_centimetre",
+    "dimensions": [
+      {
+        "base": "centimeter",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "cc",
+      "ccm",
+      "mL",
+      "ml"
+    ],
+    "currency_code": "CAD"
+  },
+  "cubic millimeter": {
+    "surfaces": [
+      "cubic millimetre",
+      "cubic millimeter",
+      "microliter",
+      "microlitre"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_metre",
+    "dimensions": [
+      {
+        "base": "millimeter",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "\u00b5l",
+      "\u00b5L"
+    ],
+    "currency_code": "CAD"
+  },
+  "liter": {
+    "surfaces": [
+      "cubic decimetre",
+      "cubic decimeter",
+      "litre",
+      "liter"
+    ],
+    "entity": "volume",
+    "URI": "Litre",
+    "dimensions": [
+      {
+        "base": "decimeter",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "l",
+      "L",
+      "ltr",
+      "\u2113"
+    ],
+    "currency_code": "CAD"
+  },
+  "centiliter": {
+    "surfaces": [
+      "centiliter",
+      "centilitre"
+    ],
+    "entity": "volume",
+    "URI": "Centilitre",
+    "dimensions": [],
+    "symbols": [
+      "cl",
+      "cL"
+    ],
+    "currency_code": "CAD"
+  },
+  "hectoliter": {
+    "surfaces": [
+      "hectorlitre",
+      "hectorliter"
+    ],
+    "entity": "volume",
+    "URI": "Hectolitre",
+    "dimensions": [],
+    "symbols": [
+      "hl",
+      "hL"
+    ],
+    "currency_code": "CAD"
+  },
+  "deciliter": {
+    "surfaces": [
+      "decilitre",
+      "deciliter"
+    ],
+    "entity": "volume",
+    "URI": "Decilitre",
+    "dimensions": [],
+    "symbols": [
+      "dl",
+      "dL"
+    ],
+    "currency_code": "CAD"
+  },
+  "us gallon": {
+    "surfaces": [
+      "gallon"
+    ],
+    "entity": "volume",
+    "URI": "Gallon",
+    "dimensions": [],
+    "symbols": [
+      "gal"
+    ],
+    "currency_code": "USD"
+  },
+  "us quart": {
+    "surfaces": [
+      "quart",
+      "dry quart",
+      "liquid quart",
+      "quart dry",
+      "quart liquid"
+    ],
+    "entity": "volume",
+    "URI": "Quart",
+    "dimensions": [],
+    "symbols": [
+      "qt",
+      "qt liq",
+      "qt dry"
+    ],
+    "currency_code": "USD"
+  },
+  "us pint": {
+    "surfaces": [
+      "pint",
+      "dry pint",
+      "liquid pint",
+      "pint dry",
+      "pint liquid"
+    ],
+    "entity": "volume",
+    "URI": "Pint",
+    "dimensions": [],
+    "symbols": [
+      "pt",
+      "pt liq",
+      "p",
+      "pt dry"
+    ],
+    "currency_code": "USD"
+  },
+  "us customary cup": {
+    "surfaces": [
+      "cup"
+    ],
+    "entity": "volume",
+    "URI": "Cup_(unit)",
+    "dimensions": [],
+    "symbols": [],
+    "currency_code": "USD"
+  },
+  "us fluid ounce": {
+    "surfaces": [
+      "fluid ounce",
+      "fl ounce",
+      "fluid oz"
+    ],
+    "entity": "volume",
+    "URI": "Fluid_ounce",
+    "dimensions": [],
+    "symbols": [
+      "fl oz",
+      "oz fl",
+      "floz",
+      "ozfl",
+      "fl. oz"
+    ],
+    "currency_code": "USD"
+  },
+  "us tablespoon": {
+    "surfaces": [
+      "tablespoon",
+      "table spoon"
+    ],
+    "entity": "volume",
+    "URI": "Tablespoon",
+    "dimensions": [],
+    "symbols": [
+      "tbsp"
+    ],
+    "currency_code": "USD"
+  },
+  "us teaspoon": {
+    "surfaces": [
+      "teaspoon",
+      "tea spoon"
+    ],
+    "entity": "volume",
+    "URI": "Teaspoon",
+    "dimensions": [],
+    "symbols": [
+      "tsp"
+    ],
+    "currency_code": "USD"
+  },
+  "cubic mile": {
+    "surfaces": [
+      "cubic mile",
+      "cu mile"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_mile",
+    "dimensions": [
+      {
+        "base": "mile",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "cu mi"
+    ],
+    "currency_code": "CAD"
+  },
+  "cubic yard": {
+    "surfaces": [
+      "cubic yard",
+      "cu yard"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_yard",
+    "dimensions": [
+      {
+        "base": "yard",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "cu yd"
+    ],
+    "currency_code": "USD"
+  },
+  "cubic foot": {
+    "surfaces": [
+      "cubic foot",
+      "cu foot"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_foot",
+    "dimensions": [
+      {
+        "base": "foot",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "cu ft"
+    ],
+    "currency_code": "USD"
+  },
+  "cubic inch": {
+    "surfaces": [
+      "cubic inch",
+      "cu inch"
+    ],
+    "entity": "volume",
+    "URI": "Cubic_inch",
+    "dimensions": [
+      {
+        "base": "inch",
+        "power": 3
+      }
+    ],
+    "symbols": [
+      "cu in"
+    ],
+    "currency_code": "USD"
+  },
+  "kelvin": {
+    "surfaces": [
+      "degree kelvin",
+      "kelvin"
+    ],
+    "entity": "temperature",
+    "URI": "Kelvin",
+    "dimensions": [],
+    "symbols": [
+      "K",
+      "\u00b0K"
+    ],
+    "currency_code": "NAN"
+  },
+  "degree generic": {
+    "surfaces": [
+      "degree"
+    ],
+    "entity": "temperature",
+    "URI": "Degree_(temperature)",
+    "dimensions": [],
+    "symbols": [
+      "\u00b0"
+    ],
+    "currency_code": "NAN"
+  },
+  "degree Celsius": {
+    "surfaces": [
+      "degree celsius",
+      "degree Celsius",
+      "Celsius",
+      "centigrade",
+      "degree centigrade",
+      "degree Centigrade"
+    ],
+    "entity": "temperature",
+    "URI": "Celsius",
+    "dimensions": [],
+    "symbols": [
+      "C",
+      "\u00b0C",
+      "\u00b0 C"
+    ],
+    "currency_code": "CAD"
+  },
+  "degree fahrenheit": {
+    "surfaces": [
+      "degree fahrenheit",
+      "Fahrenheit"
+    ],
+    "entity": "temperature",
+    "URI": "Fahrenheit",
+    "dimensions": [],
+    "symbols": [
+      "F",
+      "\u00b0F",
+      "\u00b0 F"
+    ],
+    "currency_code": "USD"
+  },
+  "square meter": {
+    "surfaces": [
+      "square metre",
+      "square meter"
+    ],
+    "entity": "area",
+    "URI": "Square_metre",
+    "dimensions": [
+      {
+        "base": "meter",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq m"
+    ],
+    "currency_code": "CAD"
+  },
+  "square kilometer": {
+    "surfaces": [
+      "square kilometre",
+      "square kilometer"
+    ],
+    "entity": "area",
+    "URI": "Square_kilometre",
+    "dimensions": [
+      {
+        "base": "kilometer",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq km"
+    ],
+    "currency_code": "CAD"
+  },
+  "hectare": {
+    "surfaces": [
+      "square hectometre",
+      "square hectometer"
+    ],
+    "entity": "area",
+    "URI": "Hectare",
+    "dimensions": [
+      {
+        "base": "hectometer",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq hm",
+      "ha"
+    ],
+    "currency_code": "CAD"
+  },
+  "square mile": {
+    "surfaces": [
+      "square mile"
+    ],
+    "entity": "area",
+    "URI": "Square_mile",
+    "dimensions": [
+      {
+        "base": "mile",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq mi"
+    ],
+    "currency_code": "USD"
+  },
+  "square yard": {
+    "surfaces": [
+      "square yard",
+      "gaj"
+    ],
+    "entity": "area",
+    "URI": "Square_yard",
+    "dimensions": [
+      {
+        "base": "yard",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq yd"
+    ],
+    "currency_code": "USD"
+  },
+  "square foot": {
+    "surfaces": [
+      "square foot"
+    ],
+    "entity": "area",
+    "URI": "Square_foot",
+    "dimensions": [
+      {
+        "base": "foot",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq ft"
+    ],
+    "currency_code": "USD"
+  },
+  "square inch": {
+    "surfaces": [
+      "square inch"
+    ],
+    "entity": "area",
+    "URI": "Square_inch",
+    "dimensions": [
+      {
+        "base": "inch",
+        "power": 2
+      }
+    ],
+    "symbols": [
+      "sq in"
+    ],
+    "currency_code": "USD"
+  },
+  "acre": {
+    "surfaces": [
+      "acre"
+    ],
+    "entity": "area",
+    "URI": "Acre",
+    "dimensions": [],
+    "symbols": [
+      "ac"
+    ],
+    "currency_code": "USD"
+  },
+  "pascal": {
+    "surfaces": [
+      "pascal"
+    ],
+    "entity": "pressure",
+    "URI": "Pascal_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "Pa",
+      "\u33a9"
+    ],
+    "currency_code": "CAD"
+  },
+  "hectopascal": {
+    "surfaces": [
+      "hectopascal"
+    ],
+    "entity": "pressure",
+    "URI": "Pascal_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "hPa"
+    ],
+    "currency_code": "CAD"
+  },
+  "kilopascal": {
+    "surfaces": [
+      "kilopascal"
+    ],
+    "entity": "pressure",
+    "URI": "Pascal_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "kPa",
+      "\u33aa"
+    ],
+    "currency_code": "CAD"
+  },
+  "megapascal": {
+    "surfaces": [
+      "megapascal"
+    ],
+    "entity": "pressure",
+    "URI": "Pascal_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "MPa"
+    ],
+    "currency_code": "CAD"
+  },
+  "gigapascal": {
+    "surfaces": [
+      "gigapascal"
+    ],
+    "entity": "pressure",
+    "URI": "Pascal_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "GPa"
+    ],
+    "currency_code": "CAD"
+  },
+  "bar": {
+    "surfaces": [
+      "bar"
+    ],
+    "entity": "pressure",
+    "URI": "Bar_(unit)",
+    "dimensions": [],
+    "symbols": [],
+    "prefixes": [
+      "M",
+      "k",
+      "d",
+      "c",
+      "m",
+      "\u00b5"
+    ],
+    "currency_code": "CAD"
+  },
+  "pound force per square inch": {
+    "surfaces": [
+      "pound per square inch",
+      "pound-force per square inch",
+      "pound force per square inch"
+    ],
+    "entity": "pressure",
+    "URI": "Pounds_per_square_inch",
+    "dimensions": [
+      {
+        "base": "pound",
+        "power": 1
+      },
+      {
+        "base": "inch",
+        "power": -2
+      }
+    ],
+    "symbols": [
+      "psi"
+    ],
+    "currency_code": "USD"
+  },
+  "millimeter of mercury": {
+    "surfaces": [
+      "millimetre of mercury",
+      "millimetre mercury",
+      "millimeter of mercury",
+      "millimeter mercury"
+    ],
+    "entity": "pressure",
+    "URI": "Millimeter_of_mercury",
+    "dimensions": [],
+    "symbols": [
+      "mmHg"
+    ],
+    "currency_code": "CAD"
+  },
+  "inch of mercury": {
+    "surfaces": [
+      "inch of mercury",
+      "inch mercury"
+    ],
+    "entity": "pressure",
+    "URI": "Inch_of_mercury",
+    "dimensions": [],
+    "symbols": [
+      "inHg",
+      "\"Hg"
+    ],
+    "currency_code": "USD"
+  },
+  "atmosphere": {
+    "surfaces": [
+      "standard atmosphere",
+      "atmosphere"
+    ],
+    "entity": "pressure",
+    "URI": "Atmosphere_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "atm"
+    ],
+    "currency_code": "CAD"
+  },
+  "knot": {
+    "surfaces": [
+      "knot"
+    ],
+    "entity": "speed",
+    "URI": "Knot_(unit)",
+    "dimensions": [],
+    "symbols": [
+      "kn",
+      "kt"
+    ],
+    "currency_code": "NAN"
+  },
+  "meter per second": {
+    "surfaces": [
+      "metre per second",
+      "meter per second"
+    ],
+    "entity": "speed",
+    "URI": "Metre_per_second",
+    "dimensions": [
+    ],
+    "symbols": [
+      "mps",
+      "m/s"
+    ],
+    "currency_code": "CAD"
+  },
+  "foot per second": {
+    "surfaces": [
+      "foot per second"
+    ],
+    "entity": "speed",
+    "URI": "Foot_per_second",
+    "dimensions": [
+    ],
+    "symbols": [
+      "fps",
+      "f/s"
+    ],
+    "currency_code": "USD"
+  },
+  "inch per second": {
+    "surfaces": [
+      "inch per second"
+    ],
+    "entity": "speed",
+    "URI": "Inch_per_second",
+    "dimensions": [
+    ],
+    "symbols": [
+      "ips"
+    ],
+    "currency_code": "USD"
+  },
+  "kilometer per hour": {
+    "surfaces": [
+      "kilometre per hour",
+      "kilometer per hour"
+    ],
+    "entity": "speed",
+    "URI": "Kilometres_per_hour",
+    "dimensions": [
+    ],
+    "symbols": [
+      "kph",
+      "km/h"
+    ],
+    "currency_code": "CAD"
+  },
+  "mile per hour": {
+    "surfaces": [
+      "mile per hour"
+    ],
+    "entity": "speed",
+    "URI": "Miles_per_hour",
+    "dimensions": [
+    ],
+    "symbols": [
+      "MPH",
+      "mph"
+    ],
+    "currency_code": "USD"
+  }
+}

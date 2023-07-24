@@ -6,13 +6,19 @@ using System.Globalization;
 using System;
 using Discord.WebSocket;
 using GrammarCheck;
+using UnitsNet;
 
 namespace DiscordBot
 {
     partial class Program
     {
         #region Console Commands
-        private async Task GrammarStat(ulong user)
+        /// <summary>
+        /// Process all messages to local API for stats
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        private static async Task GrammarStat(ulong user)
         {
             var db = new AppDBContext();
             var messages = db.UserMessages.Where(m => !(m.AuthorId == user));
@@ -205,10 +211,41 @@ namespace DiscordBot
                 .WithType(ApplicationCommandOptionType.String)
                 .WithAutocomplete(true));
 
+            var GrammarOption = new SlashCommandBuilder();
+            GrammarOption.WithName("grammar").WithDescription("Toggle grammar and spell checking DMs").WithDMPermission(false);
+
+            var ConversionCommand = new SlashCommandBuilder();
+            ConversionCommand.WithName("convert").WithDescription("Convert between units.").WithDMPermission(true);
+            ConversionCommand.AddOption(new SlashCommandOptionBuilder()
+                .WithName("unit-type")
+                .WithDescription("What type of units do you want to convert between?")
+                .WithRequired(true)
+                .WithType(ApplicationCommandOptionType.String)
+                .WithAutocomplete(true));
+            ConversionCommand.AddOption(new SlashCommandOptionBuilder()
+                .WithName("value")
+                .WithDescription("How many units do you want to convert?")
+                .WithRequired(true)
+                .WithType(ApplicationCommandOptionType.Number));
+            ConversionCommand.AddOption(new SlashCommandOptionBuilder()
+                .WithName("from-unit")
+                .WithDescription("What unit do you want to convert from?")
+                .WithRequired(true)
+                .WithType(ApplicationCommandOptionType.String)
+                .WithAutocomplete(true));
+            ConversionCommand.AddOption(new SlashCommandOptionBuilder()
+                .WithName("to-unit")
+                .WithDescription("What unit do you want to convert to?")
+                .WithRequired(true)
+                .WithType(ApplicationCommandOptionType.String)
+                .WithAutocomplete(true));
+
             try
             {
                 await _client.CreateGlobalApplicationCommandAsync(leaderboardCommand.Build());
                 await _client.CreateGlobalApplicationCommandAsync(BirthdayCommand.Build());
+                await _client.CreateGlobalApplicationCommandAsync(GrammarOption.Build());
+                await _client.CreateGlobalApplicationCommandAsync(ConversionCommand.Build());
             }
             catch (HttpException exception)
             {
@@ -350,6 +387,72 @@ namespace DiscordBot
         }
         #endregion
         #region Slash Commands
+        /// <summary>
+        /// Turn on or off grammar checking for the current user.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <returns></returns>
+        private async Task GrammarToggle(ISlashCommandInteraction command)
+        {
+            if (command.User is not SocketGuildUser sgu)
+            {
+                await command.RespondAsync("Please don't DM me. We're not friends.", ephemeral: true);
+                return;
+            }
+
+            var db = new AppDBContext();
+            await MemberJoined(sgu);
+            var user = db.GuildUsers.Find(sgu.Id, sgu.Guild.Id);
+
+            if (user == null)
+            {
+                await command.RespondAsync("I don't know who you are.", ephemeral: true);
+                return;
+            }
+
+            user.TrackGrammar = !user.TrackGrammar;
+            await command.RespondAsync($"I will {(user.TrackGrammar ? "now" :"no longer")} send you grammar corrections.", ephemeral: true);
+            db.SaveChanges();
+            return;
+
+        }
+        /// <summary>
+        /// Manually convert a unit from another unit.
+        /// </summary>
+        /// <param name="command">Slash command received from Socket</param>
+        /// <returns></returns>
+        private static async Task Convert(ISlashCommandInteraction command)
+        {
+            string unitType = command.Data.Options.First(y => y.Name == "unit-type").Value.ToString() ?? "";
+            string fromUnitS = command.Data.Options.First(y => y.Name == "from-unit").Value.ToString() ?? "";
+            string toUnitS = command.Data.Options.First(y => y.Name == "to-unit").Value.ToString() ?? "";
+            var value = ((double?)command.Data.Options.FirstOrDefault(y => y.Name == "value")?.Value) ?? 0.0;
+            
+            if (unitType == "Currency")
+            {
+                var converted = ConvertCurrency(new QuantityParse() { CurrencyCode = fromUnitS, Value = (float)value, Entity="Currency"}, toUnitS);
+                if (converted == null) { return; }
+
+                await command.RespondAsync($"{converted.OldString} = {converted.NewString}", allowedMentions: AllowedMentions.None);
+                return;
+            }
+
+            var quant = Quantity.Infos.FirstOrDefault(x => x.Name == unitType);
+            var fromUnit = quant?.UnitInfos.FirstOrDefault(x => x.Name == fromUnitS);
+            var toUnit = quant?.UnitInfos.FirstOrDefault(x => x.Name == toUnitS);
+
+            if (quant == null || fromUnit == null || toUnit == null) {
+                await command.RespondAsync("Invalid parameters", ephemeral: true);
+                return; 
+            }
+
+            var oldQuant = Quantity.From((double)value, fromUnit.Value);
+            var newQuant = oldQuant.ToUnit(toUnit.Value);
+
+            await command.RespondAsync($"{oldQuant} = {newQuant}", allowedMentions: AllowedMentions.None);
+            return;
+        }
+
         /// <summary>
         /// Receives a slash command from a text channel and adds a birthday entry to the database.
         /// </summary>

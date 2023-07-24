@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
+using UnitsNet;
+
 namespace DiscordBot
 {
     /// <summary>
@@ -70,6 +72,7 @@ namespace DiscordBot
             return FromIUM(message);
         }
         public virtual ICollection<DiscordLog> DiscordLogs { get; set; } = default!;
+        public virtual ICollection<QuantityParse> QuantityParses { get; set;} = new List<QuantityParse>();
     }
     /// <summary>
     /// A logged interaction on Discord, such as an edited message or a triggered reaction.
@@ -117,6 +120,17 @@ namespace DiscordBot
         public string? Nickname { get; set; }
         public string Displayname => Nickname ?? Username;
         public ulong GuildId { get; set; }
+        public bool TrackGrammar { get; set; } = false;
+        public Currency? Currency { get; set; }
+        public DiscordGuildUser Update(SocketGuildUser x)
+        {
+            Id = x.Id;
+            Nickname = x.Nickname;
+            GuildId = x.Guild.Id;
+            Username = x.Username;
+
+            return this;
+        }
         public DiscordGuildUser()
         {
             Nickname = string.Empty;
@@ -165,6 +179,9 @@ namespace DiscordBot
             TimeZone = TimeZoneInfo.Local.Id;
         }
     }
+    /// <summary>
+    /// Record of an acronym (unused)
+    /// </summary>
     public class Acronym
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -174,7 +191,9 @@ namespace DiscordBot
         public string Meaning { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
     }
-
+    /// <summary>
+    /// A grammar/spelling mistake
+    /// </summary>
     public class GrammarMatch
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -209,6 +228,9 @@ namespace DiscordBot
             Rule = new GrammarRule(match.rule ?? new Rule());
         }
     }
+    /// <summary>
+    /// A grammar/spelling rule
+    /// </summary>
     [PrimaryKey("Id", "SubId")]
     public class GrammarRule
     {
@@ -223,9 +245,9 @@ namespace DiscordBot
         public string CategoryName { get; set; }
         public GrammarRule()
         {
-            Id = string.Empty; 
-            SubId = string.Empty; 
-            Description = string.Empty; 
+            Id = string.Empty;
+            SubId = string.Empty;
+            Description = string.Empty;
             IssueType = string.Empty;
             Urls = Array.Empty<string?>();
             CategoryId = string.Empty;
@@ -241,5 +263,31 @@ namespace DiscordBot
             CategoryId = rule.category.id;
             CategoryName = rule.category.name;
         }
+    }
+    /// <summary>
+    /// An object representing the source and destination objects of a unit conversion.
+    /// </summary>
+    public class UnitConversion
+    {
+        public string? OldString { get; set; }
+        public string? NewString { get; set; }
+        public int StartPos { get; set; }
+        public int EndPos { get; set; }
+        public IQuantity? NewQuantity { get; set; }
+        public IQuantity? OldQuantity { get; set; }
+    }
+    /// <summary>
+    /// An object representing measurements extracted from a message
+    /// </summary>
+    public class QuantityParse
+    {
+        public ulong Id { get; set; }
+        public DiscordMessage? Message { get; set; }
+        public float Value { get; set; }
+        public string Entity { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+        public int StartPos { get; set; }
+        public int EndPos { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
     }
 }

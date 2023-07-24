@@ -4,6 +4,7 @@ using DiscordBot;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DiscordBot.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230722210730_UnitMessageTracking")]
+    partial class UnitMessageTracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -71,27 +74,23 @@ namespace DiscordBot.Migrations
                     b.ToTable("BirthdayDefs");
                 });
 
-            modelBuilder.Entity("DiscordBot.Currency", b =>
+            modelBuilder.Entity("DiscordBot.CurrencyConversion", b =>
                 {
-                    b.Property<string>("CurrencyCode")
+                    b.Property<string>("FromCurrency")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("LCID")
-                        .HasColumnType("int");
+                    b.Property<string>("ToCurrency")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime>("DateUpdated")
+                        .HasColumnType("datetime2");
 
                     b.Property<float>("Rate")
                         .HasColumnType("real");
 
-                    b.Property<DateTime>("Updated")
-                        .HasColumnType("datetime2");
+                    b.HasKey("FromCurrency", "ToCurrency");
 
-                    b.HasKey("CurrencyCode");
-
-                    b.ToTable("Currencies");
+                    b.ToTable("CurrencyConversions");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
@@ -102,8 +101,8 @@ namespace DiscordBot.Migrations
                     b.Property<decimal>("GuildId")
                         .HasColumnType("decimal(20,0)");
 
-                    b.Property<string>("CurrencyCode")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("Currency")
+                        .HasColumnType("int");
 
                     b.Property<string>("Nickname")
                         .HasColumnType("nvarchar(max)");
@@ -116,8 +115,6 @@ namespace DiscordBot.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id", "GuildId");
-
-                    b.HasIndex("CurrencyCode");
 
                     b.ToTable("GuildUsers");
                 });
@@ -310,7 +307,7 @@ namespace DiscordBot.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("MessageId")
+                    b.Property<decimal>("MessageId")
                         .HasColumnType("decimal(20,0)");
 
                     b.Property<int>("StartPos")
@@ -328,15 +325,6 @@ namespace DiscordBot.Migrations
                     b.HasIndex("MessageId");
 
                     b.ToTable("QuantityParse");
-                });
-
-            modelBuilder.Entity("DiscordBot.DiscordGuildUser", b =>
-                {
-                    b.HasOne("DiscordBot.Currency", "Currency")
-                        .WithMany()
-                        .HasForeignKey("CurrencyCode");
-
-                    b.Navigation("Currency");
                 });
 
             modelBuilder.Entity("DiscordBot.DiscordLog", b =>
@@ -371,7 +359,9 @@ namespace DiscordBot.Migrations
                 {
                     b.HasOne("DiscordBot.DiscordMessage", "Message")
                         .WithMany("QuantityParses")
-                        .HasForeignKey("MessageId");
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Message");
                 });

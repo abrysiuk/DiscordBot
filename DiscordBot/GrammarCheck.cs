@@ -1,12 +1,10 @@
-﻿using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
+
 
 namespace GrammarCheck
 {
+    
     internal class Check
     {
         public static async Task<Response?> ProcessText(string text)
@@ -23,8 +21,7 @@ namespace GrammarCheck
             var formContent = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("text", text),
-                new KeyValuePair<string, string>("language", "en-ca")//,
-                //new KeyValuePair<string, string>("preferredVariants", "en-ca, en-us")
+                new KeyValuePair<string, string>("language", "en-ca")
             });
 
             var response = await client.PostAsync(api, formContent);
@@ -46,7 +43,7 @@ namespace GrammarCheck
     {
         public Software software { get; set; } = new Software();
         public Language language { get; set; } = new Language();
-        public Match[] matches { get; set; } = new Match[0];
+        public Match[] matches { get; set; } = Array.Empty<Match>();
     }
     public class Software
     {
